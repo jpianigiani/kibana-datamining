@@ -1,9 +1,7 @@
 {
 "DefaultValues":
     {
-        "DefaultFlavorProperties":      {"vnf_type":"DT_NIMS_EXT"},
-        "ServicesToSkip": [],
-        "ServiceNameWildCard":"#"
+
         
     },
 
@@ -15,71 +13,22 @@
     ,
 
 
-"SitesCategories":
-    {   
-        "TimeCommands" :[""],
-        "SiteCommands" : ["live-traffic","live-management","lab-traffic","lab-management","live","lab","all"],
-        "SiteCommandMap": {
-            "live-traffic":["LiveTrafficSites"],
-            "live-management":["LiveMgmtSites"],
-            "lab-traffic":["LabTrafficSites"],
-            "lab-management":["LabMgmtSites"],
-            "lab":["LabTrafficSites","LabMgmtSites"],
-            "live":["LiveMgmtSites","LiveTrafficSites"],
-            "all":["LiveMgmtSites","LiveTrafficSites","LabTrafficSites","LabMgmtSites"]
-        },
-        "Categories": ["LiveTrafficSites","LiveMgmtSites","LabTrafficSites","LabMgmtSites"],
-        "LiveTrafficSites": ["ber500","dtm010","ffm021","hno002","hno003","hmb026","kln000","lei001","mun000","nbg000","nes008","stg010"], 
-        "LiveMgmtSites": ["stg810","ber800"], 
-        "LabTrafficSites": ["nbg991","nbg993"], 
-        "LabMgmtSites": ["nbg992","nbg995"]
-    },
-    
-
 "Application_Parameters": 
     {
-        "TIMESTAMP": "", 
-        "SOURCE_SITE_SUFFIX": "", 
-        "DESTINATION_SITE_SUFFIX": "", 
-        "SRCSITESLIST":[],
-        "DESTSITESLIST": [],
-        "SERVICE": [], 
-        "ANYSERVICE":false,
-        "SERVICEGRAPHENABLED":true,
-        "IGNOREHOSTAGS": false, 
-        "WIPE_DESTSITE": false, 
-        "BESTVMDISTRO": true, 
-        "SILENTMODE": false, 
-        "HW_OPTIMIZATION_MODE": "", 
-        "SKIPMGMTSITE": false,
-        "JUSTSOURCE": true,
-        "INITIALSERVICEVALUE":[]
+        "DEBUG":0
     },
     "User_CLI_Visible_Parameters": 
     [ 
-    "SOURCE_SITE_SUFFIX", 
-    "DESTINATION_SITE_SUFFIX", 
-    "SERVICE"
+    "DEBUG"
     ]
     ,
 "Files": 
     {   
         "PathForOpenstackFiles" : "./JSON",  
-        "PathForOutputReports" : "./logs", 
-        "FileTypes" : ["aggregate_list", "hypervisor_list","server_dict", "flavor_list", "volume_list"],
-        "ExtendedFileTypes": ["network_list","subnet_list","port_list"]
+        "PathForOutputReports" : "./REPORTS"
     }
 ,   
 
-"RackOptimizationInputParameters":
-    {
-        "RacksPerAZ": 2, 
-        "MetricFormulasForRackOptimization" : 
-            [
-                "(currentvalue-average)**2"
-            ],
-        "KeyForCalculatingRackOptimization": "VCPUsAvailPerRack"
-    },
 "Reports_Keys" : 
     {
         "REPORT_KEYS" :
