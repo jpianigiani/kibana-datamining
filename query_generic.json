@@ -1,0 +1,78 @@
+{
+  "version": true,
+  "size": 500,
+  "sort": [
+    {
+      "@timestamp": {
+        "order": "desc",
+        "unmapped_type": "boolean"
+      }
+    }
+  ],
+  "_source": {
+    "excludes": []
+  },
+  "aggs": {
+    "2": {
+      "date_histogram": {
+        "field": "@timestamp",
+        "calendar_interval": "1h",
+        "time_zone": "Europe/Rome",
+        "min_doc_count": 1
+      }
+    }
+  },
+  "stored_fields": [
+    "*"
+  ],
+  "script_fields": {},
+  "docvalue_fields": [
+    {
+      "field": "@timestamp",
+      "format": "date_time"
+    },
+    {
+      "field": "alert_data.alerts.endsAt",
+      "format": "date_time"
+    },
+    {
+      "field": "alert_data.alerts.startsAt",
+      "format": "date_time"
+    },
+    {
+      "field": "ts",
+      "format": "date_time"
+    }
+  ],
+  "query": {
+    "bool": {
+      "must": [],
+      "filter": [
+        
+        {
+          "range": {
+            "@timestamp": {
+              "format": "strict_date_optional_time",
+              "gte": "2022-08-10T04:00:00.000Z",
+              "lte": "2022-08-12T09:13:19.540Z"
+            }
+          }
+        }
+      ],
+      "should": [],
+      "must_not": []
+    }
+  },
+  "highlight": {
+    "pre_tags": [
+      "@kibana-highlighted-field@"
+    ],
+    "post_tags": [
+      "@/kibana-highlighted-field@"
+    ],
+    "fields": {
+      "*": {}
+    },
+    "fragment_size": 2147483647
+  }
+}

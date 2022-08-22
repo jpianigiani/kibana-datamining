@@ -1,0 +1,136 @@
+{
+"DefaultValues":
+    {
+        "DefaultFlavorProperties":      {"vnf_type":"DT_NIMS_EXT"},
+        "ServicesToSkip": [],
+        "ServiceNameWildCard":"#"
+        
+    },
+
+"ReportsSettings":
+    { 
+    "ReportTypesNotToBePrintedOnScreen":[],
+    "WrapLinesWhenWritingToFiles":true
+    }
+    ,
+
+
+"SitesCategories":
+    {   
+        "TimeCommands" :[""],
+        "SiteCommands" : ["live-traffic","live-management","lab-traffic","lab-management","live","lab","all"],
+        "SiteCommandMap": {
+            "live-traffic":["LiveTrafficSites"],
+            "live-management":["LiveMgmtSites"],
+            "lab-traffic":["LabTrafficSites"],
+            "lab-management":["LabMgmtSites"],
+            "lab":["LabTrafficSites","LabMgmtSites"],
+            "live":["LiveMgmtSites","LiveTrafficSites"],
+            "all":["LiveMgmtSites","LiveTrafficSites","LabTrafficSites","LabMgmtSites"]
+        },
+        "Categories": ["LiveTrafficSites","LiveMgmtSites","LabTrafficSites","LabMgmtSites"],
+        "LiveTrafficSites": ["ber500","dtm010","ffm021","hno002","hno003","hmb026","kln000","lei001","mun000","nbg000","nes008","stg010"], 
+        "LiveMgmtSites": ["stg810","ber800"], 
+        "LabTrafficSites": ["nbg991","nbg993"], 
+        "LabMgmtSites": ["nbg992","nbg995"]
+    },
+    
+
+"Application_Parameters": 
+    {
+        "TIMESTAMP": "", 
+        "SOURCE_SITE_SUFFIX": "", 
+        "DESTINATION_SITE_SUFFIX": "", 
+        "SRCSITESLIST":[],
+        "DESTSITESLIST": [],
+        "SERVICE": [], 
+        "ANYSERVICE":false,
+        "SERVICEGRAPHENABLED":true,
+        "IGNOREHOSTAGS": false, 
+        "WIPE_DESTSITE": false, 
+        "BESTVMDISTRO": true, 
+        "SILENTMODE": false, 
+        "HW_OPTIMIZATION_MODE": "", 
+        "SKIPMGMTSITE": false,
+        "JUSTSOURCE": true,
+        "INITIALSERVICEVALUE":[]
+    },
+    "User_CLI_Visible_Parameters": 
+    [ 
+    "SOURCE_SITE_SUFFIX", 
+    "DESTINATION_SITE_SUFFIX", 
+    "SERVICE"
+    ]
+    ,
+"Files": 
+    {   
+        "PathForOpenstackFiles" : "./JSON",  
+        "PathForOutputReports" : "./logs", 
+        "FileTypes" : ["aggregate_list", "hypervisor_list","server_dict", "flavor_list", "volume_list"],
+        "ExtendedFileTypes": ["network_list","subnet_list","port_list"]
+    }
+,   
+
+"RackOptimizationInputParameters":
+    {
+        "RacksPerAZ": 2, 
+        "MetricFormulasForRackOptimization" : 
+            [
+                "(currentvalue-average)**2"
+            ],
+        "KeyForCalculatingRackOptimization": "VCPUsAvailPerRack"
+    },
+"Reports_Keys" : 
+    {
+        "REPORT_KEYS" :
+        [
+            "time",  "@timestamp", "_index","host","ident","severity","message"
+        ],
+    "REPORT_SORTING_KEYS" : 
+        ["time" ]
+       
+    },
+"FieldLenghts":
+    {
+        "time":13, 
+        "@timestamp": 20, 
+        "_index": 35, 
+        "host":45,
+        "ident": 25, 
+        "severity": 6, 
+        "message": 120,
+        "default":10
+    },
+"FieldLists" :
+    {
+
+    }
+    ,
+    
+"FieldTransforms" : 
+    {
+        "time": "value",
+        "@timestamp": "value[0:19]",
+        "_index": "value",
+        "host": "value.ljust(length)",
+        "ident": "value",
+        "severity": "value.ljust(length)",
+        "message":"json.dumps(value)[0:500]",
+        "default": "value.ljust(length)"
+    } ,
+"FieldTransformsAttributes":
+{
+    "split_vnfname":{ 
+        "Site": "([a-z,A-Z]{3}[0-9]{3})",
+        "Lineup":".{6}([a-z,A-Z][0-9]{2})",
+        "Vendor":".{9}([a-z,A-Z]{3})",
+        "vnfname":".{12}([a-z,A-Z]{4})",
+        "vnfindex":".{16}([0-9]{2})",
+        "vnfcname":".{18}([a-z,A-Z]{5})",
+        "vnfcindex":".{23}([0-9]{2})",
+        "vnfname-vnfcname":".{12}([a-z,A-Z]{4}).{2}([a-z,A-Z]{5})"
+
+    }
+}
+}
+

@@ -1,0 +1,16 @@
+{
+        "endpoint":{
+                "url":"http://172.23.95.77:9200/fluentd.*/_search",
+                "proxies": {
+                    "https": "socks5h://127.0.0.1:5000",
+                    "http": "socks5h://127.0.0.1:5000"
+                },
+                "headers":{
+                    "Content-Type": "application/json",
+                    "kbn-xsrf": "True"
+                }
+            },
+            "fields":["time","@timestamp","_index","host","ident","severity","message"]
+
+
+}
