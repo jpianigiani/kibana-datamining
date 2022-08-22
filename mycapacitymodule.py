@@ -25,8 +25,7 @@ class parameters:
     # GLOBAL DICTIONARIES: these are used to store command line arguments values or user input values (so that the behavior is consistent between User interactive mode and CLI mode)
 
     PATHFORAPPLICATIONCONFIGDATA='./'
-    CONFIGFILE = 'resource-analysis.json'
-    ERRORFILE = 'resource-analysis-errors.json'
+    APPLICATION = 'resource-analysis'
     APPLICATIONCONFIG_DICTIONARY={}
     MODE_OF_OPT_OPS = 0
     paramsdict={}
@@ -45,7 +44,9 @@ class parameters:
     OPTIMIZE_BY_CALC = 1
     OPTIMIZE_BY_FILE = 2
 
-    def __init__(self, CONFIGFILENAME=CONFIGFILE, ERRORFILENAME=ERRORFILE):
+    def __init__(self, myApplicationName=APPLICATION):
+        CONFIGFILENAME=myApplicationName+".json"
+        ERRORFILENAME=myApplicationName+"-errors.json"
         now = datetime.now()  # current date and time
         date_time = now.strftime("%d/%m/%Y %H:%M:%S")
         #date_time = now.strftime("%d/%m/%Y")

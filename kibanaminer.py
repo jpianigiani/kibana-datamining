@@ -121,7 +121,6 @@ class kibanaminer():
                 filterlist.append(Tmp)
 
 
-        print("-".format(x for x in range(80)))
         print(json.dumps(self.query, indent=5))
 
 
@@ -222,8 +221,9 @@ class kibanaminer():
 
 
 def main(arguments):
-
-    MyPars=parameters("kibanaminer.json")
+    programname= arguments[0].split(".")[0]
+    print(programname)
+    MyPars=parameters(programname)
     MyReport=report(MyPars)
     parser = argparse.ArgumentParser()
     CurrentTime = datetime.datetime.now()
