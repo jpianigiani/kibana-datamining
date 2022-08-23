@@ -1,7 +1,6 @@
 {
 "DefaultValues":
     {
-
         
     },
 
@@ -33,7 +32,7 @@
     {
         "REPORT_KEYS" :
         [
-            "time",  "@timestamp", "_index","host","ident","severity","message"
+"@timestamp", "_index","host","ident","severity","message"
         ],
     "REPORT_SORTING_KEYS" : 
         ["time" ]
@@ -64,7 +63,7 @@
         "host": "value.ljust(length)",
         "ident": "value",
         "severity": "value.ljust(length)",
-        "message":"json.dumps(value)[0:500]",
+        "message":"json.dumps(value,indent=4)[0:500]",
         "default": "value.ljust(length)"
     } ,
 "FieldTransformsAttributes":
@@ -77,7 +76,8 @@
         "vnfindex":".{16}([0-9]{2})",
         "vnfcname":".{18}([a-z,A-Z]{5})",
         "vnfcindex":".{23}([0-9]{2})",
-        "vnfname-vnfcname":".{12}([a-z,A-Z]{4}).{2}([a-z,A-Z]{5})"
+        "vnfname-vnfcname":".{12}([a-z,A-Z]{4}).{2}([a-z,A-Z]{5})",
+        "fluentd_topic":"fluentd.(.*)-(.*)"
 
     }
 }

@@ -10,7 +10,7 @@
                     "kbn-xsrf": "True"
                 }
             },
-            "fields":["time","@timestamp","_index","host","ident","severity","message"]
+            "fields":["@timestamp","_index","host","ident","severity","message"]
 
 
 }

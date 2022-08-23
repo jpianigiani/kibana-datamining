@@ -542,11 +542,17 @@ class report():
     
 
 
-    def split_vnfname(self, vmname, resulttype):
+    def split_string(self, vmname, resulttype, join=(),joiner='-'):
         Result= self.myRegexDict[resulttype].match(vmname)
         if Result:
             #print(vmname,resulttype,Result, "-".join (Result.groups()))
-            return "-".join (Result.groups())
+            if len(join)==0:
+                return joiner.join (Result.groups())
+            else:
+                resstring=""
+                for groupid in join:
+                    resstring=joiner.join(Result.groups(groupid))
+                return resstring 
         else:
             #print(vmname,resulttype," not found")
             try:

@@ -6,7 +6,7 @@ import requests
 import os, sys
 import argparse
 import datetime
-from mycapacitymodule import parameters,report,menu
+from report_library import parameters,report,menu
 
 # http://aop-kibana.poc.dcn.telekom.de:5601/app/kibana#/dev_tools/console?_g=(filters:!())
 
@@ -154,6 +154,8 @@ class kibanaminer():
         self.request = self.session.get(self.elastic_url, headers=self.HEADERS, json=self.query)
         print("response code {}".format(self.request.status_code))
         self.queryresult=self.request.json()
+        with open("kibanaminer.out","w") as file1:
+            file1.write(json.dumps(self.queryresult,indent=10))
 
     def transform_data(self):
         count=0
@@ -206,6 +208,10 @@ class kibanaminer():
                 else:
                     self.transformed_data[count][mykey]=record["_source"][mykey]
             count+=1
+        with open("kibanaminer.short.out","w") as file1:
+            file1.write(json.dumps(self.transformed_data,indent=10))
+
+
 
     def sort_by_timestamp(self):
         pass
@@ -243,7 +249,7 @@ def main(arguments):
     MyKibana.transform_data2()
 
     MyKibana.add_to_report(MyReport)
-    MyReport.set_name("KIBANA")
+    MyReport.set_name("KIBANA_LOG_REPORT")
     MyReport.print_report(MyPars)
 
 if __name__ == '__main__':
