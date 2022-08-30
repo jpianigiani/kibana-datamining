@@ -10,7 +10,8 @@
                     "kbn-xsrf": "True"
                 }
             },
-            "fields":["@timestamp","_index","host","ident","severity","message"]
+            "fields":["@timestamp","_index","host","ident","severity","message"],
+            "two_level_parse":["_index","message"]
 
 
 }

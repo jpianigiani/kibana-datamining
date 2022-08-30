@@ -145,7 +145,7 @@ class parameters:
         print(MyLine.format('LIST OF PARAMETER ARGUMENTS'))
         print(json.dumps(self.paramsdict,indent=40))
         # PRINT CLI COMMAND AND PARAMETERS USED
-        CMD = "python3 resource-analysis.py"
+        CMD = "python3 <appname>.py"
         for x in self.paramsdict:
             if x in self.paramslist:
                 if type(x) == list:
@@ -225,10 +225,22 @@ class report():
 
         self.FIELDTRANSFORMSATTRIBUTES=params.APPLICATIONCONFIG_DICTIONARY["FieldTransformsAttributes"]
         self.myRegexDict= {}
-        for Item in self.FIELDTRANSFORMSATTRIBUTES["split_vnfname"].keys():
-            value = self.FIELDTRANSFORMSATTRIBUTES["split_vnfname"][Item]
+        self.myMessageRegexDict={}
+        for Item in self.FIELDTRANSFORMSATTRIBUTES["split_string"].keys():
+            value = self.FIELDTRANSFORMSATTRIBUTES["split_string"][Item]
             #print("DEBUG", Item, value)
-            self.myRegexDict[Item]=re.compile(value)        
+            self.myRegexDict[Item]=re.compile(value)
+        #if "message_parser" in self.FIELDTRANSFORMSATTRIBUTES["message_parser"].keys():
+            #print(json.dumps(self.FIELDTRANSFORMSATTRIBUTES["message_parser"],indent=4))
+        for Item in self.FIELDTRANSFORMSATTRIBUTES["message_parser"].keys():
+            value = self.FIELDTRANSFORMSATTRIBUTES["message_parser"][Item]
+            #print("message_parser init:DEBUG", Item, value)
+            try:
+                self.myMessageRegexDict[Item]=re.compile(value)       
+            except:
+                print("ERROR IN compiling regex: ")
+                print("Item:",Item, " Value:",value)
+
 
     def get_reporttype(self):
         MyClass= str(self.__class__).replace("<","").replace(">","").replace("'","")
@@ -432,6 +444,8 @@ class report():
                         print("Record_ApplyTransforms: ERROR 04 START - \nMost likely FIELD is a list but it is not present in the application config JSON in the FIELDSLIST, so it is not classified neither list nor else\n")
                         print("transform=",transform)
                         print("column:",columnname)
+                        print("currentrecord[key]:",currentrecord[key])
+                        
                         exit(-1)
                     ListItemLen =self.FIELDLISTS[columnname]
                     FormatString_ListItemField ="{:"+str( ListItemLen)+"s}"
@@ -542,8 +556,8 @@ class report():
     
 
 
-    def split_string(self, vmname, resulttype, join=(),joiner='-'):
-        Result= self.myRegexDict[resulttype].match(vmname)
+    def split_string(self, inputstring, resulttype,join=[],joiner='-'):
+        Result= self.myRegexDict[resulttype].match(inputstring)
         if Result:
             #print(vmname,resulttype,Result, "-".join (Result.groups()))
             if len(join)==0:
@@ -554,11 +568,13 @@ class report():
                     resstring=joiner.join(Result.groups(groupid))
                 return resstring 
         else:
-            #print(vmname,resulttype," not found")
+            print("split_string : parsed ", inputstring," to find ", resulttype," but REGEX did not find result")
             try:
                 return "?"*self.FIELDLENGTHS[resulttype]
             except:
-                print("split_vnfname : FIELDLENGTHS does not have field ",resulttype)
+                print("-------------------  APPLICATION ERROR: --------------------------")
+                print("split_string : FIELDLENGTHS does not have field ",resulttype)
+                print("-------------------------------------------------------------------")
                 exit(-1)
             
 
@@ -610,6 +626,41 @@ class report():
     def shortenAAP(self, x):
         Retval= x.replace("active","A").replace("standby","S")
         return Retval
+    
+    def message_parser(self,msglist):
+        #                   overcloudt4d-compdpdk72hw1-0.nbg995
+        #                   overcloudt4d-compdpdk74hw1-3.nbg995.poc.dcn.telekom.de
+        print("-------report_libraray.py:message_parser------------")
+        resultdict={}
+        for msg in msglist:
+            message= msg.lower().strip()
+            startmessage=message
+            #print("Message:",message)
+            
+            for MyRegexKey in self.myMessageRegexDict.keys():
+                MyRegex=self.myMessageRegexDict[MyRegexKey]
+                #try:
+                #Result=MyRegex.search(message)
+
+                Result=MyRegex.findall(message)
+                #Result2=MyRegex.search(message)
+                if Result:
+                    if MyRegexKey not in resultdict.keys():
+                        resultdict[MyRegexKey]=[]
+                    for x in Result :
+                    #for x in Result.groups() :
+                        #print("X=",x)
+                        if x :
+                            if len(x)>0 and x not in resultdict[MyRegexKey]:
+                                #print(x,"--",type(x))
+                                resultdict[MyRegexKey].append(x)
+                    #print("\tResultdict:",resultdict[MyRegexKey])
+                #print("\tRegexKey:{:20s} \tResult:{:} \tResult2:{:} ".format(MyRegexKey, Result, Result2))
+                #except:
+                #    print("\tmessage_parser : error on re.search for key={:}".format(MyRegexKey))
+        print(json.dumps(resultdict,indent=10))
+
+
 # -------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------------------
 #                           CLASS :     MENU
