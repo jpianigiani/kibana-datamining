@@ -50,6 +50,10 @@
     }
     ,
     
+"Multiline_per_line":{
+        "1":["@timestamp", "_index","host","ident","severity"],
+        "2":["message"]
+    },
 "FieldTransforms" : 
     {
         "time": "value",
@@ -93,8 +97,7 @@
                     "severity":"(info|warn|debug|error)",
                     "lineup":"(\\w{3,}-[a-z,A-Z]{3}[0-9]{3}[-][a-z,A-Z][0-9]{2})",
                     "RepoName":"([a-z,A-Z]{3}[0-9]{3}[-]\\w{3,}-[a-z,A-Z][0-9]{2})",
-
-                    "error":"error[:= ]\\w{1,}"
+                    "error":"(error[:= ]\\w{1,})"
                     
 
                         }

@@ -347,7 +347,7 @@ class report():
     def LineWrapper(self, record):
         var_Keys=self.get_keys()
         Lines=[[]]
-        MaxRows=128
+        MaxRows=1024
         Lines=[['' for j in range(len(var_Keys) )] for i in range(MaxRows)]
         if record is None:
             print("DEBUG: LineWrapper : record is NONE")
@@ -628,14 +628,11 @@ class report():
         return Retval
     
     def message_parser(self,msglist):
-        #                   overcloudt4d-compdpdk72hw1-0.nbg995
-        #                   overcloudt4d-compdpdk74hw1-3.nbg995.poc.dcn.telekom.de
-        print("-------report_libraray.py:message_parser------------")
+        print("-------report_library.py:message_parser------------")
         resultdict={}
         for msg in msglist:
             message= msg.lower().strip()
             startmessage=message
-            #print("Message:",message)
             
             for MyRegexKey in self.myMessageRegexDict.keys():
                 MyRegex=self.myMessageRegexDict[MyRegexKey]
@@ -683,11 +680,10 @@ class menu:
     Magenta = '\033[95m'
     Grey = '\033[90m'
     Black = '\033[90m'
+    Backg_Yellow= '\033[1;42m'
+    Backg_Green= '\033[1;42m'
+    Backg_Default='\033[1;0m'
     Default = '\033[99m'
 
     ColorsList =(OKBLUE,OKCYAN,OKGREEN,WARNING,FAIL,White,Yellow,Magenta,Grey)
-
-
-
-
 

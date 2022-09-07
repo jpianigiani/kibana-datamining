@@ -11,7 +11,7 @@
                 }
             },
             "fields":["@timestamp","_index","host","ident","severity","message"],
-            "two_level_parse":["_index","message"]
+            "two_level_parse":["_index","host","ident","message"]
 
 
 }
