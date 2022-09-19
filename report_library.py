@@ -11,6 +11,7 @@ import re
 import operator
 from datetime import datetime
 import traceback
+from aop_logger import aop_logger
 
 #from aop_logger import aop_logger
 
@@ -28,7 +29,6 @@ class parameters:
 
     PATHFORAPPLICATIONCONFIGDATA='./'
     APPLICATION = 'resource-analysis'
-    #SYSLOGFILE = 'resource-analysis.log'
 
     APPLICATIONCONFIG_DICTIONARY={}
     MODE_OF_OPT_OPS = 0
@@ -54,9 +54,11 @@ class parameters:
             self.AOP_LOGGER_ENABLED=False
         else:
             self.AOP_LOGGER_ENABLED=True
+        self.myApplicationName=myApplicationName
         CONFIGFILENAME=myApplicationName+".json"
+        print("opening config file : ",CONFIGFILENAME)
         ERRORFILENAME=myApplicationName+"-errors.json"
-        SYSLOGFILE=myApplicationName+".log"
+        self.SYSLOGFILE=myApplicationName+".log"
         now = datetime.now()  # current date and time
         date_time = now.strftime("%d/%m/%Y %H:%M:%S")
         #date_time = now.strftime("%d/%m/%Y")
@@ -80,11 +82,8 @@ class parameters:
                     exit(-1)
             self.APPLICATIONCONFIG_DICTIONARY=dict(TMPJSON)
         #-------------------------------------------------------------------------------------------------------------------
-            self.PATHFOROPENSTACKFILES=self.APPLICATIONCONFIG_DICTIONARY["Files"]["PathForOpenstackFiles"]
             self.PATHFOROUTPUTREPORTS=self.APPLICATIONCONFIG_DICTIONARY["Files"]["PathForOutputReports"]
         #-------------------------------------------------------------------------------------------------------------------
-
-
             self.paramsdict = self.APPLICATIONCONFIG_DICTIONARY["Application_Parameters"]
             self.paramslist=list(self.APPLICATIONCONFIG_DICTIONARY["User_CLI_Visible_Parameters"])
         #-------------------------------------------------------------------------------------------------------------------
@@ -122,8 +121,13 @@ class parameters:
             print("AOP-LOGGER disabled")
 
         #-------------------------------------------------------------------------------------------------------------------
+    def get_logger(self):
+        return self.logger
 
 
+
+    def get_configdata_dictionary(self):
+        return self.APPLICATIONCONFIG_DICTIONARY
 
     def set(self, key, value):
         self.paramsdict[key] = value
@@ -181,11 +185,52 @@ class parameters:
             sitename= "stg810"
             retval=sitename.lower()
         return retval
+    
+    def cast_error(self,ErrorCode, AddlData):
+        NEWRECORD=[]
+        a = str(self.__class__)
+        #traceback.print_exc(limit=None, file=None, chain=True)
+        #ErrorObjectClass= a.replace("'",'').replace("<",'').replace(">","").replace("class ","")
 
+        ErrorInfo=self.ERROR_DICTIONARY[ErrorCode]
+        #print(json.dumps(ErrorInfo,indent=30))
+        ErrorObjectClass=ErrorInfo["Class"]
+        SrcSuffix=self.get_param_value("SOURCE_SITE_SUFFIX")
+        SiteName= self.parse_suffisso(SrcSuffix)
+        if ErrorInfo["Level"]in self.APPLICATIONCONFIG_DICTIONARY["syslog"]["ErrorsToReport"]:
+            NEWRECORD.append(SrcSuffix[0:8])
+            NEWRECORD.append(SiteName)
+            NEWRECORD.append(ErrorInfo["Level"])
+            NEWRECORD.append(ErrorObjectClass)
+            NEWRECORD.append(ErrorCode)
+            NEWRECORD.append(ErrorInfo["Synopsis"])
+            NEWRECORD.append(AddlData)
+            #NEWRECORD.append(ErrorInfo)
 
+            try:
+                if self.AOP_LOGGER_ENABLED:
+                    syslogstring="Timestamp: {:9s} Site: {:12s} ErrCode: {:5s} Class:{:30s} Synopsis:{:60s}: {:120s}".format(SrcSuffix[0:8],
+                                SiteName,ErrorCode,ErrorObjectClass,ErrorInfo["Synopsis"],AddlData)
+                    if ErrorInfo["Level"]=="CRITICAL":
+                        self.logger.critical(syslogstring)
+                    elif ErrorInfo["Level"]=="ERROR":
+                        self.logger.error(syslogstring)
+                    elif ErrorInfo["Level"]=="WARNING":
+                        self.logger.warning(syslogstring)
+            except NameError as Err:
+                pass
+            self.ERROR_REPORT.append(NEWRECORD)
+        
+        
 
-
-
+        actions = ErrorInfo["AfterErrorExecution"]
+        for Item in actions:
+            print("cast_error")
+            print(ErrorCode)
+            print(NEWRECORD)
+            print(AddlData)
+            print(Item)
+            eval(Item)
 
 
 # -------------------------------------------------------------------------------------------------------------------------
@@ -230,16 +275,16 @@ class report():
             value = self.FIELDTRANSFORMSATTRIBUTES["split_string"][Item]
             #print("DEBUG", Item, value)
             self.myRegexDict[Item]=re.compile(value)
-        #if "message_parser" in self.FIELDTRANSFORMSATTRIBUTES["message_parser"].keys():
+        if "message_parser" in self.FIELDTRANSFORMSATTRIBUTES.keys():
             #print(json.dumps(self.FIELDTRANSFORMSATTRIBUTES["message_parser"],indent=4))
-        for Item in self.FIELDTRANSFORMSATTRIBUTES["message_parser"].keys():
-            value = self.FIELDTRANSFORMSATTRIBUTES["message_parser"][Item]
-            #print("message_parser init:DEBUG", Item, value)
-            try:
-                self.myMessageRegexDict[Item]=re.compile(value)       
-            except:
-                print("ERROR IN compiling regex: ")
-                print("Item:",Item, " Value:",value)
+            for Item in self.FIELDTRANSFORMSATTRIBUTES["message_parser"].keys():
+                value = self.FIELDTRANSFORMSATTRIBUTES["message_parser"][Item]
+                #print("message_parser init:DEBUG", Item, value)
+                try:
+                    self.myMessageRegexDict[Item]=re.compile(value)       
+                except:
+                    print("ERROR IN compiling regex: ")
+                    print("Item:",Item, " Value:",value)
 
 
     def get_reporttype(self):
@@ -407,12 +452,130 @@ class report():
                 retval.append(myline)
 
             return retval,myunwrappedline
+
+
         except:
             traceback.print_exc(limit=None, file=None, chain=True)
             print("Record:", record)
             print("ReportKeyItem=",ReportKeyItem)
             self.PARAMS.cast_error("00009","Record:"+str(record))
             exit(-1)
+
+
+#---------------------------------------------------
+#   Receives a Report Record, produces as return value a 2D Array containing one record per Line to be printed with wrapping of text beyond FieldLength
+#---------------------------------------------------
+    def LineWrapper_V2(self, record):
+
+
+        if record is None:
+            print("DEBUG: LineWrapper : record is NONE")
+            exit(-1)
+        
+        
+        #try: #CHANGETHIS
+
+        if "REPORT_MULTILINE_KEYS" in self.REPORTFIELDGROUP.keys():
+            ListOfMultilineKeys=self.REPORTFIELDGROUP["REPORT_MULTILINE_KEYS"].keys()
+            self.MultiLineFlag=True
+        else:
+            ListOfMultilineKeys=["1"]
+            self.MultiLineFlag=False
+        
+
+        Lines=[[]]
+        MaxRows=1024
+
+        myunwrappedline=''
+        retval=[]
+        RowIncrement=0
+        for MultiLineRowIndexString in ListOfMultilineKeys:
+            var_TotalKeys=self.get_keys()
+            MaxRows=1024
+            Lines=[['' for j in range(len(var_TotalKeys) )] for i in range(MaxRows*len(ListOfMultilineKeys))] 
+            if self.MultiLineFlag:
+                var_LineKeys=self.REPORTFIELDGROUP["REPORT_MULTILINE_KEYS"][MultiLineRowIndexString]
+            else:
+                var_LineKeys=self.get_keys()
+
+            MultiLineRowIndex=int(MultiLineRowIndexString)
+            #print("DEBUG - v2 - ",MultiLineRowIndex, "....",var_Keys)
+            MaxRows=0
+            for ReportKeyItem in var_LineKeys:
+
+                RecordEntryIndex =var_TotalKeys.index(ReportKeyItem)
+                TableEntryIndex=var_LineKeys.index(ReportKeyItem)
+
+                var_FieldLen = self.get_fieldlength(ReportKeyItem)
+                var_RecordEntry= record[RecordEntryIndex]
+
+                if var_RecordEntry is None:
+                    print("DEBUG LineWrapper: Field {:} is none \nfor record: ".format(ReportKeyItem,record))
+                    exit(-1)  
+                if type(var_RecordEntry)== list:
+                    var_Entry=""
+                    for ListItem in var_RecordEntry:
+                        var_Entry+=ListItem
+                else:
+                    var_Entry=var_RecordEntry
+                var_RecordEntryLen = len(var_Entry)
+                
+                stringa1="{:"+str( var_FieldLen  )+"s} |"
+                myunwrappedline+=stringa1.format(var_Entry)  
+
+                RowsValue = math.ceil(var_RecordEntryLen/var_FieldLen)
+                if RowsValue>MaxRows:
+                    MaxRows=RowsValue
+
+                if RowsValue==0:
+                    #print("DEBUG LineWrapper: Field {:} has Rowsvalue={:} \nfor record: ".format(ReportKeyItem,RowsValue,record))
+                    RowsValue=1
+                    Lines[0][TableEntryIndex]=""
+                    #exit(-1)    
+                else:
+                    for NofLinesPerRecEntry in range(RowsValue):
+                        stringa_start = NofLinesPerRecEntry*var_FieldLen
+                        if (var_RecordEntryLen> stringa_start+ var_FieldLen  ):
+                            stringa_end = (1+NofLinesPerRecEntry)*var_FieldLen
+                        else:
+                            stringa_end =  var_RecordEntryLen
+                        try:
+                            newItem=var_Entry[stringa_start:stringa_end]
+                        except:
+                            print("DEBUG: Error in LineWrapper : ReportKeyItem : {:}, Var_Entry={:}".format(ReportKeyItem,var_Entry))
+                            exit(-1)
+                        Lines[NofLinesPerRecEntry][TableEntryIndex]=newItem
+                    
+                if MultiLineRowIndex==1 and False :
+                    print("DEBUG - Linewrapperv2 - \nReportKeyIem:",ReportKeyItem, " in var_Linekeys:",var_LineKeys,"\nRecordEntryIndex :",RecordEntryIndex, " TableEntryIndex:",TableEntryIndex)
+                    print("var_RecordEntry:",var_RecordEntry)
+                    print("Lines:\n",Lines)
+
+            LineLenTotal=0
+            for i in range(MaxRows):
+                myline=''
+                for j in range(len(var_LineKeys)):
+                    length=self.get_fieldlength(var_LineKeys[j])
+                    stringa1="{:"+str( length  )+"s} |"
+                    stringa2=stringa1.format(Lines[i][j])
+                    myline+=stringa2  
+                    LineLenTotal=len(stringa2) 
+
+            
+                retval.append(myline)
+            string1="_"*LineLenTotal
+            if self.MultiLineFlag:
+                retval.append(string1)
+        return retval,myunwrappedline
+
+            
+        #except:
+        #    traceback.print_exc(limit=None, file=None, chain=True)
+        #    print("Record:", record)
+        #    print("ReportKeyItem=",ReportKeyItem)
+        #    self.PARAMS.cast_error("00009","Record:"+str(record))
+        #    exit(-1)
+
 
 
 
@@ -496,7 +659,7 @@ class report():
                 NewRecord=self.Record_ApplyTransforms(record)
             else:
                 NewRecord=record
-            NewLines,UnWrappedline=self.LineWrapper(NewRecord)
+            NewLines,UnWrappedline=self.LineWrapper_V2(NewRecord)
 
             print_on_screen=self.ReportType not in pars.APPLICATIONCONFIG_DICTIONARY["ReportsSettings"]["ReportTypesNotToBePrintedOnScreen"]
             wrap_line_on_file=pars.APPLICATIONCONFIG_DICTIONARY["ReportsSettings"]["WrapLinesWhenWritingToFiles"]
@@ -568,9 +731,14 @@ class report():
                     resstring=joiner.join(Result.groups(groupid))
                 return resstring 
         else:
-            print("split_string : parsed ", inputstring," to find ", resulttype," but REGEX did not find result")
+            #print("split_string : parsed ", inputstring," to find ", resulttype," but REGEX did not find result")
             try:
-                return "?"*self.FIELDLENGTHS[resulttype]
+                print()
+                retval = "?"*self.FIELDLENGTHS[resulttype]
+
+                #print("DEBUG Split_string retval:",retval)
+                return retval
+                
             except:
                 print("-------------------  APPLICATION ERROR: --------------------------")
                 print("split_string : FIELDLENGTHS does not have field ",resulttype)
@@ -657,7 +825,10 @@ class report():
                 #    print("\tmessage_parser : error on re.search for key={:}".format(MyRegexKey))
         print(json.dumps(resultdict,indent=10))
 
-
+    
+    def calc_max_percentage(self,num1, den1, num2, den2):
+        retval= int(100*max(float (num1) / float (den1) , float (num2)/ float (den2)))
+        return retval
 # -------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------------------
 #                           CLASS :     MENU
