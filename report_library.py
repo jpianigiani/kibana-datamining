@@ -11,8 +11,10 @@ import re
 import operator
 from datetime import datetime
 import traceback
-from aop_logger import aop_logger
-
+try: 
+    from aop_logger import aop_logger
+except:
+    print("No aop_logger module to import")
 #from aop_logger import aop_logger
 
 
@@ -49,6 +51,7 @@ class parameters:
     OPTIMIZE_BY_FILE = 2
 
     def __init__(self, myApplicationName=APPLICATION):
+        
         modulename="aop_logger"
         if modulename not in sys.modules:
             self.AOP_LOGGER_ENABLED=False
@@ -65,8 +68,8 @@ class parameters:
         self.paramsdict["TIMESTAMP"] = date_time
         TMPJSON=[]
         self.DSTSITES = []
-        screenrows, screencolumns = os.popen('stty size', 'r').read().split()
-        self.ScreenWitdh = int(screencolumns)
+        self.screenrows, self.screencolumns = os.popen('stty size', 'r').read().split()
+        self.ScreenWitdh = int(self.screencolumns)
         self.ColorsList =(menu.OKBLUE,menu.OKCYAN,menu.OKGREEN,menu.WARNING,menu.FAIL,menu.White,menu.Yellow,menu.Magenta,menu.Grey) 
         self.ERROR_REPORT=[]
         
@@ -140,7 +143,10 @@ class parameters:
         return self.paramsdict["SILENTMODE"]
     # -----------------------------------
     def get_param_value(self, name):
-        return self.paramsdict[name]
+        if name in self.paramsdict.keys():
+            return self.paramsdict[name]
+        else:
+            return "**"
     # -----------------------------------
 
     # -----------------------------------
@@ -242,7 +248,6 @@ class report():
 
     Report = []
     ReportTotalUsage = []
-    GenericDict={}
 
 
     def __init__(self,params):
@@ -252,23 +257,23 @@ class report():
         self.State=''
         self.KEYS_KEYNAME="_KEYS"
         self.SORTINGKEYS_KEYNAME="_SORTING_KEYS"
+        self.MULTILINEKEYS_KEYNAME="_MULTILINE_KEYS"
         self.color=menu.Yellow
         self.ReportTotalUsage = []
+        self.ScreenWidth=params.ScreenWitdh
         self.PARAMS = params
         self.name=str(self.__class__).replace("'",'').replace("<",'').replace(">","").replace("class ","") + hex(id(self))
+        self.Parameters_Configdata=params.APPLICATIONCONFIG_DICTIONARY
 
-        self.ReportsNamesAndData = params.APPLICATIONCONFIG_DICTIONARY["ReportsSettings"]
-        self.FIELDLENGTHS= params.APPLICATIONCONFIG_DICTIONARY["FieldLenghts"]
-        self.FIELDLISTS= params.APPLICATIONCONFIG_DICTIONARY["FieldLists"]
-        #print(json.dumps(self.APPLICATIONCONFIG_DICTIONARY,indent=22))
-        self.FIELDTRANSFORMS=params.APPLICATIONCONFIG_DICTIONARY["FieldTransforms"]
-        self.FILESSTRUCTURE =params.APPLICATIONCONFIG_DICTIONARY["Files"]
+        self.ReportsNamesAndData = self.Parameters_Configdata["ReportsSettings"]
+        self.FIELDLENGTHS= self.Parameters_Configdata["FieldLenghts"]
+        self.FIELDLISTS= self.Parameters_Configdata["FieldLists"]
+        #print(json.dumps(params.APPLICATIONCONFIG_DICTIONARY,indent=22))
+        self.FIELDTRANSFORMS=self.Parameters_Configdata["FieldTransforms"]
+        self.FILESSTRUCTURE =self.Parameters_Configdata["Files"]
 
-        self.REPORTFIELDGROUP =params.APPLICATIONCONFIG_DICTIONARY["Reports_Keys"]
-
-        self.GenericDict={}
-
-        self.FIELDTRANSFORMSATTRIBUTES=params.APPLICATIONCONFIG_DICTIONARY["FieldTransformsAttributes"]
+        self.REPORTFIELDGROUP =self.Parameters_Configdata["Reports_Keys"]
+        self.FIELDTRANSFORMSATTRIBUTES=self.Parameters_Configdata["FieldTransformsAttributes"]
         self.myRegexDict= {}
         self.myMessageRegexDict={}
         for Item in self.FIELDTRANSFORMSATTRIBUTES["split_string"].keys():
@@ -287,9 +292,12 @@ class report():
                     print("Item:",Item, " Value:",value)
 
 
-    def get_reporttype(self):
-        MyClass= str(self.__class__).replace("<","").replace(">","").replace("'","")
-        retval=MyClass.split(".")[1].upper()
+    def get_reporttype(self,customname=""):
+        if len(customname)==0:
+            MyClass= str(self.__class__).replace("<","").replace(">","").replace("'","")
+            retval=MyClass.split(".")[1].upper()
+        else:
+            retval=customname
         return retval
 
     def ClearData(self):      
@@ -301,11 +309,9 @@ class report():
         self.name=myname
         self.ReportFile = open(self.FILESSTRUCTURE["PathForOutputReports"]+"/"+self.name, 'w')
 
-
     def set_state(self,mystatus):
         self.State=mystatus
         self.write_line_to_file(mystatus)
-
 
     def write_line_to_file(self,line):
         try:
@@ -313,12 +319,12 @@ class report():
         except:
             self.PARAMS.cast_error("00005","line:"+line)
 
-
     def get_keys(self):
         try:
             return self.REPORTFIELDGROUP[self.ReportType+self.KEYS_KEYNAME]
         except:
             self.PARAMS.cast_error( "00007","get_keys :{:}".format(self.ReportType+self.KEYS_KEYNAME))
+        
 
     def get_sorting_keys(self):
         try:
@@ -326,23 +332,26 @@ class report():
         except:
             self.PARAMS.cast_error( "00006","get_sorting_keys: :{:}".format(self.ReportType+self.SORTINGKEYS_KEYNAME))
 
-
-
-    
-
+    def get_multiline_keys(self):
+        try:
+            return self.REPORTFIELDGROUP[self.ReportType+self.MULTILINEKEYS_KEYNAME]
+        except:
+            return ["0"]
 
     def UpdateLastRecordValueByKey(self, mykey, value):
-
         if mykey is None:
             print("UpdateLastRecordValueByKey : error : key is null") 
             exit(-1)
         record= self.Report[len(self.Report)-1]
         if mykey in self.FIELDLISTS.keys():
-            for x in value:
-                record[self.get_keys().index(mykey)].append(x)
+            if type(value)==list:
+                for x in value:
+                    record[self.get_keys().index(mykey)].append(x)
+            else:
+                record[self.get_keys().index(mykey)]=value
+
         else:
             record[self.get_keys().index(mykey)]=value
-
 
     def FindRecordByKeyValue(self, mykey, value):
         MyFieldIndex=self.get_keys().index(mykey)
@@ -350,7 +359,6 @@ class report():
             if x[MyFieldIndex]==value:
                 return x  
         return []        
-
 
     def AppendRecordToReport(self, newrecord):
         self.Report.append(newrecord)
@@ -467,34 +475,36 @@ class report():
 #---------------------------------------------------
     def LineWrapper_V2(self, record):
 
-
         if record is None:
             print("DEBUG: LineWrapper : record is NONE")
             exit(-1)
         
-        
+
         #try: #CHANGETHIS
 
-        if "REPORT_MULTILINE_KEYS" in self.REPORTFIELDGROUP.keys():
-            ListOfMultilineKeys=self.REPORTFIELDGROUP["REPORT_MULTILINE_KEYS"].keys()
-            self.MultiLineFlag=True
-        else:
-            ListOfMultilineKeys=["1"]
+        ListOfMultilineKeys=self.get_multiline_keys()
+        if ListOfMultilineKeys==["0"]:
             self.MultiLineFlag=False
-        
+        else:
+            self.MultiLineFlag=True
+        LastMultilineKey=str(len(ListOfMultilineKeys)-1)
 
         Lines=[[]]
-        MaxRows=1024
-
+        #print("DEBUG - Wrapperv2 : FIELDLENGTHS")
+        #print(json.dumps(self.FIELDLENGTHS ,indent=4))
+        #print("DEBUG - Wrapperv2 : FIELDLISTS")
+        #print(json.dumps(self.FIELDLISTS,indent=4))
         myunwrappedline=''
         retval=[]
-        RowIncrement=0
+        #print(json.dumps(ListOfMultilineKeys, indent=4))
         for MultiLineRowIndexString in ListOfMultilineKeys:
+            #print("________________________________ _________________ __________________________")
+            #print("DEBUG MultiLineRowIndexString:",MultiLineRowIndexString)
             var_TotalKeys=self.get_keys()
-            MaxRows=1024
+            MaxRows=64
             Lines=[['' for j in range(len(var_TotalKeys) )] for i in range(MaxRows*len(ListOfMultilineKeys))] 
             if self.MultiLineFlag:
-                var_LineKeys=self.REPORTFIELDGROUP["REPORT_MULTILINE_KEYS"][MultiLineRowIndexString]
+                var_LineKeys=self.get_multiline_keys()[MultiLineRowIndexString]
             else:
                 var_LineKeys=self.get_keys()
 
@@ -502,7 +512,6 @@ class report():
             #print("DEBUG - v2 - ",MultiLineRowIndex, "....",var_Keys)
             MaxRows=0
             for ReportKeyItem in var_LineKeys:
-
                 RecordEntryIndex =var_TotalKeys.index(ReportKeyItem)
                 TableEntryIndex=var_LineKeys.index(ReportKeyItem)
 
@@ -510,20 +519,26 @@ class report():
                 var_RecordEntry= record[RecordEntryIndex]
 
                 if var_RecordEntry is None:
-                    print("DEBUG LineWrapper: Field {:} is none \nfor record: ".format(ReportKeyItem,record))
+                    print("DEBUG LineWrapper: Field {:} is none \nfor record:-->\n{:}<--\n".format(ReportKeyItem,record))
                     exit(-1)  
-                if type(var_RecordEntry)== list:
-                    var_Entry=""
-                    for ListItem in var_RecordEntry:
-                        var_Entry+=ListItem
-                else:
-                    var_Entry=var_RecordEntry
+
+                #if type(var_RecordEntry)== list:
+                #    var_Entry=""
+                #    for ListItem in var_RecordEntry:
+                #        var_Entry+=ListItem
+                #else:
+                #    var_Entry=var_RecordEntry
+                
+                var_Entry="".join(var_RecordEntry)
                 var_RecordEntryLen = len(var_Entry)
+                #print("DEBUG: var_RecordEntry:",var_RecordEntry," var_Entry:-->",var_Entry,"<--",type(var_RecordEntry)," len of:", var_RecordEntryLen)
                 
                 stringa1="{:"+str( var_FieldLen  )+"s} |"
                 myunwrappedline+=stringa1.format(var_Entry)  
 
+                # This section produces a 2D array, where each line contains the part of each record in each line
                 RowsValue = math.ceil(var_RecordEntryLen/var_FieldLen)
+                #print("DEBUG: RowsValue:",RowsValue, " var_RecordEntryLen:", var_RecordEntryLen," var_FieldLen:",var_FieldLen)
                 if RowsValue>MaxRows:
                     MaxRows=RowsValue
 
@@ -549,9 +564,10 @@ class report():
                 if MultiLineRowIndex==1 and False :
                     print("DEBUG - Linewrapperv2 - \nReportKeyIem:",ReportKeyItem, " in var_Linekeys:",var_LineKeys,"\nRecordEntryIndex :",RecordEntryIndex, " TableEntryIndex:",TableEntryIndex)
                     print("var_RecordEntry:",var_RecordEntry)
+                    print("MaxRows:",MaxRows)
+                    print("var_Entry:",var_Entry)
                     print("Lines:\n",Lines)
 
-            LineLenTotal=0
             for i in range(MaxRows):
                 myline=''
                 for j in range(len(var_LineKeys)):
@@ -559,11 +575,15 @@ class report():
                     stringa1="{:"+str( length  )+"s} |"
                     stringa2=stringa1.format(Lines[i][j])
                     myline+=stringa2  
-                    LineLenTotal=len(stringa2) 
-
             
                 retval.append(myline)
-            string1="_"*LineLenTotal
+            #string1="_"*LineLenTotal
+            #print("LastMultilineKey:",LastMultilineKey," LastMultilineKey:",LastMultilineKey)
+            if MultiLineRowIndexString==LastMultilineKey:
+                char="-"
+            else:
+                char="."
+            string1=char*self.ScreenWidth
             if self.MultiLineFlag:
                 retval.append(string1)
         return retval,myunwrappedline
@@ -659,6 +679,10 @@ class report():
                 NewRecord=self.Record_ApplyTransforms(record)
             else:
                 NewRecord=record
+                #print("DEBUG print_report_line")
+                #print("record:")
+                #print(NewRecord)
+                #print("Report name",self.name)
             NewLines,UnWrappedline=self.LineWrapper_V2(NewRecord)
 
             print_on_screen=self.ReportType not in pars.APPLICATIONCONFIG_DICTIONARY["ReportsSettings"]["ReportTypesNotToBePrintedOnScreen"]
@@ -796,7 +820,7 @@ class report():
         return Retval
     
     def message_parser(self,msglist):
-        print("-------report_library.py:message_parser------------")
+        #print("-------report_library.py:message_parser------------")
         resultdict={}
         for msg in msglist:
             message= msg.lower().strip()
@@ -807,7 +831,19 @@ class report():
                 #try:
                 #Result=MyRegex.search(message)
 
-                Result=MyRegex.findall(message)
+                #print("-----   ---------")
+                ResultTemp=MyRegex.findall(message)
+                #print(type(ResultTemp))
+                #for Item in ResultTemp:
+                Result2=[]
+                for item in ResultTemp:
+                    if type(item)==tuple:
+                        for elem in item:
+                            Result2.append(elem)
+                    else:
+                        Result2.append(item)
+                Result =list(filter(None, Result2))
+                #print(Result)
                 #Result2=MyRegex.search(message)
                 if Result:
                     if MyRegexKey not in resultdict.keys():
@@ -823,12 +859,118 @@ class report():
                 #print("\tRegexKey:{:20s} \tResult:{:} \tResult2:{:} ".format(MyRegexKey, Result, Result2))
                 #except:
                 #    print("\tmessage_parser : error on re.search for key={:}".format(MyRegexKey))
-        print(json.dumps(resultdict,indent=10))
+        #print(json.dumps(resultdict,indent=10))
+        return resultdict
 
     
     def calc_max_percentage(self,num1, den1, num2, den2):
         retval= int(100*max(float (num1) / float (den1) , float (num2)/ float (den2)))
         return retval
+
+
+
+class dynamic_report(report):
+
+    def __init__(self,customreportType,inputdictionary, pars):
+        super().__init__(pars)
+        self.ReportType=customreportType
+        self.set_name(customreportType)
+        self.Parameters_Configdata_Backup=self.Parameters_Configdata.copy()
+        var_Dict= self.Parameters_Configdata["Reports_Keys"]
+        MyCustomReportIndexes=inputdictionary.keys()
+        #print("DEBUG dynamic_report")
+        #print(json.dumps(inputdictionary, indent=4))
+
+        # Case 1 {"0":{record0},"1":{record1}....}
+        if "0" in inputdictionary.keys():
+            MyCustomReportKeys=[]
+            MyCustomReportFieldLengths={}
+            for Record in inputdictionary.keys():
+                RecordKeys=Record.keys()
+                for RecordKey in RecordKeys:
+                    if RecordKey not in MyCustomReportKeys: 
+                        MyCustomReportKeys.append(RecordKey)
+                        MyCustomReportFieldLengths[RecordKey]=0
+                    MyFieldLen=len(inputdictionary[Record] [RecordKey])
+                    if MyFieldLen>MyCustomReportFieldLengths[RecordKey]:
+                        MyCustomReportFieldLengths[RecordKey]=MyFieldLen
+
+            var_Dict[self.ReportType+self.KEYS_KEYNAME]=MyCustomReportKeys
+            var_Dict[self.ReportType+self.SORTINGKEYS_KEYNAME]=[MyCustomReportKeys[0]]
+            var_Dict[self.ReportType+self.MULTILINEKEYS_KEYNAME]={"0":MyCustomReportKeys}
+            #print(json.dumps(var_Dict, indent=10))
+        else:
+        # Case 1 {"key1":"value1","key2":"value2"....}
+            MyCustomReportKeys=[]
+            MyCustomReportFieldLengths={}
+            MyCustomReportFieldTypes={}   
+            for RecordKey in inputdictionary.keys():
+                if RecordKey not in MyCustomReportKeys: 
+                    MyCustomReportKeys.append(RecordKey)
+                    MyCustomReportFieldLengths[RecordKey]=0
+                if type(inputdictionary[RecordKey])==list:
+                    for ValueItem in inputdictionary[RecordKey]:
+                        MyFieldLen=len(ValueItem)
+                        if MyFieldLen>MyCustomReportFieldLengths[RecordKey]:
+                            MyCustomReportFieldLengths[RecordKey]=MyFieldLen+2
+                else:
+                    MyFieldLen=len(inputdictionary[RecordKey])
+                    if MyFieldLen>MyCustomReportFieldLengths[RecordKey]:
+                        MyCustomReportFieldLengths[RecordKey]=MyFieldLen+2
+                    MyCustomReportFieldTypes[RecordKey]=type(inputdictionary[RecordKey])
+            #print(json.dumps(var_Dict, indent=10))
+            #print("DEBUG dynamic report")
+            #print("BEFORE:")
+            #print(json.dumps(self.Parameters_Configdata, indent=10))
+
+            var_Dict[self.ReportType+self.KEYS_KEYNAME]=MyCustomReportKeys
+            var_Dict[self.ReportType+self.SORTINGKEYS_KEYNAME]=[MyCustomReportKeys[0]]
+            var_Dict[self.ReportType+self.MULTILINEKEYS_KEYNAME]={}
+            MultiLineIndex=0
+            LenPerLine=0
+            PerLineKeysList=[]
+            #print("DEBUG: MyCustomReportKeys:", MyCustomReportKeys)
+            #print("DEBUG: MyCustomReportFieldLengths:", MyCustomReportFieldLengths)
+
+            for NewKey in MyCustomReportKeys:
+                LenPerLine+=MyCustomReportFieldLengths[NewKey]
+                if LenPerLine<=self.ScreenWidth:
+                    PerLineKeysList.append(NewKey)
+                    #print("DEBUG: PerLineKeysList:",PerLineKeysList, " of len:", LenPerLine,"/",self.ScreenWidth)
+                else:
+                    #print("DEBUG: NewLine: printing var_Dict[self.ReportType+self.MULTILINEKEYS_KEYNAME]")
+                    MultiLineIndex+=1
+                    tempDict={str(MultiLineIndex):PerLineKeysList}
+                    PerLineKeysList=[]
+                    PerLineKeysList.append(NewKey)
+                    LenPerLine=len(NewKey)
+                
+                var_Dict[self.ReportType+self.MULTILINEKEYS_KEYNAME][str(MultiLineIndex)]=PerLineKeysList
+            #print(json.dumps(var_Dict[self.ReportType+self.MULTILINEKEYS_KEYNAME],indent=10))   
+            #var_Dict[self.ReportType+self.MULTILINEKEYS_KEYNAME]={"0":MyCustomReportKeys}
+            
+            for NewKey in MyCustomReportKeys:
+                if NewKey not in self.Parameters_Configdata["FieldLenghts"].keys():
+                    self.Parameters_Configdata["FieldLenghts"][NewKey]=MyCustomReportFieldLengths[NewKey]
+                if NewKey not in self.Parameters_Configdata["FieldLists"].keys():
+                    self.Parameters_Configdata["FieldLists"][NewKey]=MyCustomReportFieldLengths[NewKey]
+                
+            #print("AFTER:")
+            #print(json.dumps(self.Parameters_Configdata, indent=10))
+            self.addemptyrecord()
+            for DictKey in inputdictionary.keys():
+                self.UpdateLastRecordValueByKey(DictKey,inputdictionary[DictKey])
+ 
+    def restore_configdata(self):
+        #print("BEFORE")
+        #print(json.dumps(self.Parameters_Configdata,indent=4))
+        self.Parameters_Configdata=self.Parameters_Configdata_Backup.copy()
+        #print("AFTER")
+        #print(json.dumps(self.Parameters_Configdata,indent=4))
+
+        
+        
+
 # -------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------------------
 #                           CLASS :     MENU

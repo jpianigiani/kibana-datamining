@@ -9,10 +9,12 @@ import argparse
 import datetime
 import string
 import dateutil.parser as dparser
-from report_library import parameters,report,menu
+from report_library import dynamic_report, parameters,report,menu
 import logging
 import re
 import getch
+import simple_term_menu
+
 
 
 
@@ -36,6 +38,7 @@ class kibanaminer():
     Backg_Default='\033[1;0m'
     Default = '\033[99m'
 
+#------------------------------------------------------------------------------------------------------------------------------------
 
     def __init__(self, args):
         self.CONFIGFILENAME="configdata.json"
@@ -55,11 +58,14 @@ class kibanaminer():
         if self.DEBUG:
             print("DEBUG Mode")
 
+#------------------------------------------------------------------------------------------------------------------------------------
     def set_filter(self, args):
 
         self.localRegexDict={}
         if args.WORDS:
             Regexstring="("+"|".join(args.WORDS)+")"
+            print("WORDS: RegexString:",Regexstring)
+
             self.localRegexDict["WORDSREGEX"]=Regexstring
 
             self.localRegexDict["WORDS"]=re.compile(Regexstring)
@@ -72,6 +78,7 @@ class kibanaminer():
         
         if args.EXCLUDEWORDS:
             Regexstring="("+"|".join(args.EXCLUDEWORDS)+")"
+            print("EXCLUDE WORDS: RegexString:",Regexstring)
             self.localRegexDict["EXCLUDEWORDSREGEX"]=Regexstring
 
             self.localRegexDict["EXCLUDEWORDS"]=re.compile(Regexstring)
@@ -182,32 +189,7 @@ class kibanaminer():
                 filterlist.append(Tmp)
         print(json.dumps(self.query, indent=5))
 
-
-    def get_recursively(self, search_dict, field):
-        """
-        Takes a dict with nested lists and dicts,
-        and searches all dicts for a key of the field
-        provided.
-        """
-        fields_found = []    
-
-        for key, value in search_dict.items():
-            if key == field:
-                fields_found.append(value)
-            elif isinstance(value, dict):
-                results = self.get_recursively(value, field)
-                for result in results:
-                    fields_found.append(result)
-
-
-            elif isinstance(value, list):
-                for item in value:
-                    if isinstance(item, dict):
-                        more_results = self.get_recursively(item, field)
-                        for another_result in more_results:
-                            fields_found.append(another_result)
-
-        return fields_found
+#------------------------------------------------------------------------------------------------------------------------------------
 
     def get_data_from_kibana(self):
         self.request = self.session.get(self.elastic_url, headers=self.HEADERS, json=self.query)
@@ -215,6 +197,7 @@ class kibanaminer():
         self.queryresult=self.request.json()
         with open("kibanaminer.out","w") as file1:
             file1.write(json.dumps(self.queryresult,indent=10))
+#------------------------------------------------------------------------------------------------------------------------------------
 
     def transform_data(self):
         self.count=0
@@ -255,6 +238,9 @@ class kibanaminer():
         #print(json.dumps(self.transformed_data,indent=10))
         #exit(-1)
 
+
+#------------------------------------------------------------------------------------------------------------------------------------
+
     def transform_data2(self, arguments):
         self.ExcludedCounter=0
         self.transformed_data={}
@@ -265,18 +251,26 @@ class kibanaminer():
             print("--------------------------------------------")            
             exit(-1)
         else:
+            self.RECCOUNT=self.queryresult["hits"]["total"]["value"]
             print("--------------------------------------------")            
-            print("TOTAL RECORDS FROM KIBANA: ", self.queryresult["hits"]["total"]["value"])
+            print("TOTAL RECORDS FROM KIBANA: ", self.RECCOUNT)
             print("--------------------------------------------")            
 
         for record in self.queryresult["hits"]["hits"]:
             if self.DEBUG:
                 print(self.OKGREEN+"--------------------------------------------")            
-                print("Record # ", self.count)
+                print("Record # {:} of {:}", self.count,self.RECCOUNT)
                 print("--------------------------------------------"+self.Yellow)            
             #self.transformed_data[self.count]={}
-            IncludeRecord=False
-            ExcludeRecord=False
+            if self.localRegexDict["WORDSFLAG"]:
+                IncludeRecord=False
+            else:
+                IncludeRecord=True
+
+            if self.localRegexDict["EXCLUDEWORDSFLAG"]:
+                ExcludeRecord=True
+            else:
+                ExcludeRecord=False
             temp_result={}
             for mykey in self.FieldsList:
                 if mykey in record.keys():
@@ -346,21 +340,23 @@ class kibanaminer():
         with open("kibanaminer.short.out","w") as file1:
             file1.write(json.dumps(self.transformed_data,indent=10))
 
+#------------------------------------------------------------------------------------------------------------------------------------
 
     def sort_by_timestamp(self):
         pass
+#------------------------------------------------------------------------------------------------------------------------------------
 
     def add_to_report(self, reportobject):
         for item in self.transformed_data.keys():
-            
-            print("Item:", item,"\n",json.dumps(self.transformed_data[item],indent=5))
+            if self.DEBUG:
+                print("Item:", item,"\n",json.dumps(self.transformed_data[item],indent=5))
 
             reportobject.addemptyrecord()
             for field in self.FieldsList:
             #["time","timestamp","_index","host","ident","severity","message"]
                 reportobject.UpdateLastRecordValueByKey(field,self.transformed_data[item][field])
 
-    def interactive(self):
+    def interactive(self, args):
         #src= input("continue?")
         print(self.FAIL+"\t<CR>: Next\t-:Back\t<ESC> or q:Exit"+self.Yellow)
         #charlist={'q':0,'Q':0,'-':-1,'\n':1,' ':1,'/':2,chr(27):0,'2':100,'1':10}
@@ -371,35 +367,41 @@ class kibanaminer():
             "-":{"value":-1,"action":"delta"},
             '\n':{"value":1,"action":"delta"},
             chr(91)+chr(67):{"value":1,"action":"delta"},
-
             "1":{"value":10,"action":"delta"},
-            "2":{"value":100,"action":"delta"}
+            "2":{"value":100,"action":"delta"},
+            "+":{"value":0}
 
 
         }
-
+        
         ch=''
         action="delta"
         while ch not in charlist.keys():
-            ch=getch.getche()
-            print(ascii(ch))
+            ch=getch.getch()
+            #print(ascii(ch))
         retval=charlist[ch]["value"]
         action= charlist[ch]["action"]
 
         return retval, action
 
-    def scan_and_parse_messages(self, args,reportobject):
+
+#------------------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------------------------------
+    def scan_and_parse_messages(self, args,reportobject, pars):
         mylist= list(self.transformed_data.keys())
         mylistlen=len(mylist)
-        print(mylist)
+        #print(mylist)
         key=0
         #for key in self.transformed_data.keys():
         GoOn=True
+
+
         while GoOn:
             #print("key:",key, " len of keys:",mylistlen)
             #message=[ self.transformed_data[key]["_index"], self.transformed_data[key]["message"]]
             try:
                 message=[]
+                
                 for field in self.TwoLevelParseFields :
                     #print("DEBUG: Adding ", field, " to message ",message, " from ",self.transformed_data[key] )
                     if field in self.transformed_data[key].keys():
@@ -409,15 +411,30 @@ class kibanaminer():
                 print("scan_and_parse_messages: Field:",field)
                 exit(-1)
             #print("MESSAGE:", message)
-            print(self.Backg_Yellow+"____________ kibanaminer.py:scan_and_parse_messages__________"+self.Backg_Default)
-            print("RECORD: {:}\n{:}\n".format(key,json.dumps(self.transformed_data[key],indent=5)))
+            print(self.Backg_Yellow)
+            Stringa0="{0:_^"+str(pars.ScreenWitdh)+"}"
+            Stringa1=" RECORD: {:3d} OF {:3d} ".format(key,mylistlen)
+            Stringa=Stringa0.format(Stringa1)
+            Stringa+=self.Backg_Default
+            print(Stringa)
+            #print(Stringa.format(key,mylistlen))
+            Stringa="{:}"
+            print(Stringa.format(json.dumps(self.transformed_data[key],indent=5)))
+
+            print(self.Backg_Default)
+            
             #print("Message:\n",message)
             #try:
-            reportobject.message_parser(message)
+            returndictionary = reportobject.message_parser(message)
+            temp_report = dynamic_report("MESSAGE_PARSE",returndictionary,pars)
+            temp_report.print_report(pars)
+            temp_report.restore_configdata()
+            del temp_report
+            
             #except:
             #    print("kibanaminer.py:scan_and_parse_messages - error searching {:} in {:}".format(key,message))
             if args.INTERACTIVE:
-                Delta, action=self.interactive()
+                Delta, action=self.interactive(args)
                 if Delta==0:
                     return 0
                 key+=Delta
@@ -427,7 +444,8 @@ class kibanaminer():
                 if key>=mylistlen:
                     return True
             
-
+#------------------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------------------------------
 def main(arguments):
     programname= arguments[0].split(".")[0]
     MyPars=parameters(programname)
@@ -452,7 +470,8 @@ def main(arguments):
     MyKibana.set_filter(args)
     MyKibana.get_data_from_kibana()
     MyKibana.transform_data2(args)
-    MyKibana.scan_and_parse_messages(args,MyReport)
+    MyKibana.scan_and_parse_messages(args,MyReport, MyPars)
+    
     MyKibana.add_to_report(MyReport)
     MyReport.set_name("KIBANA_LOG_REPORT")
     MyReport.print_report(MyPars)
