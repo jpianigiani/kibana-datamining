@@ -867,7 +867,6 @@ class report():
         def upper_match(match):
             return match.group(1).upper()
 
-
         #print("-------report_library.py:message_parser------------")
         resultdict={}
         for msg in messagedict.keys():
@@ -877,9 +876,15 @@ class report():
                 ResultTemp=MyRegex.findall(PayloadToParse)
                 if ResultTemp:
                     MyUncompiledRegex=self.get_uncompiled_regex("message_parser",MyRegexKey)
-                    ModifiedPayload = re.sub(MyUncompiledRegex,lambda x :  x.group(0).upper(),PayloadToParse)
+                    ModifiedPayload = re.sub(MyUncompiledRegex,lambda x :  menu.Backg_Red_ForeG_White+x.group(0).upper()+menu.Backg_Default,PayloadToParse)
                     #print("message_parser_V2 \nUncompiledRegex(",MyRegexKey,"):",MyUncompiledRegex,"\nModified Payload:\n",ModifiedPayload)
                     #print("Regex.findall:",ResultTemp,"\n")
+                    try:
+                        TestDict=json.loads(messagedict[msg])
+                        IsJSON=True
+                        print(json.dumps(TestDict,indent=3))
+                    except:
+                        IsJSON=False
                     messagedict[msg]=ModifiedPayload
                 Result2=[]
                 for item in ResultTemp:
@@ -1082,6 +1087,7 @@ class menu:
     Backg_Yellow= '\033[1;42m'
     Backg_Green= '\033[1;42m'
     Backg_Default='\033[1;0m'
+    Backg_Red_ForeG_White= '\033[40;7m'+White
     Default = '\033[99m'
 
     ColorsList =(OKBLUE,OKCYAN,OKGREEN,WARNING,FAIL,White,Yellow,Magenta,Grey)

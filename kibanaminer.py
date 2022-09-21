@@ -479,7 +479,11 @@ class kibanaminer():
             #returndictionary = reportobject.message_parser(message)
             returndictionary = reportobject.message_parser_V2(self.transformed_data[key])
             Stringa="{:}"         
-            print(Stringa.format(json.dumps(self.transformed_data[key],indent=5)))
+            #print(Stringa.format(json.dumps(self.transformed_data[key],indent=5)))
+            for k,v in self.transformed_data[key].items():
+                Stringa=self.Default+"{:20s}".format(k)
+                Stringa1=Stringa+" : "+"{:}".format(v)
+                print(Stringa1)
             print(self.Backg_Default)
             temp_report = dynamic_report("MESSAGE_PARSE",returndictionary,pars)
             temp_report.print_report(pars)
