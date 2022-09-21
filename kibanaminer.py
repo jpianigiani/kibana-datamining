@@ -343,7 +343,7 @@ class kibanaminer():
 
 #------------------------------------------------------------------------------------------------------------------------------------
 
-    def sort_by_timestamp(self):
+    def message_classifier(self, messagedict):
         pass
 #------------------------------------------------------------------------------------------------------------------------------------
 
@@ -455,11 +455,12 @@ class kibanaminer():
             #message=[ self.transformed_data[key]["_index"], self.transformed_data[key]["message"]]
             try:
                 message=[]
-                
+                messagekeys=[]
                 for field in self.TwoLevelParseFields :
                     #print("DEBUG: Adding ", field, " to message ",message, " from ",self.transformed_data[key] )
                     if field in self.transformed_data[key].keys():
                         message.append (self.transformed_data[key][field])
+                        messagekeys.append(field)
             except:
                 print("scan_and_parse_messages: message:",message)
                 print("scan_and_parse_messages: Field:",field)
@@ -472,13 +473,14 @@ class kibanaminer():
             Stringa+=self.Backg_Default
             print(Stringa)
             #print(Stringa.format(key,mylistlen))
-            Stringa="{:}"
-            print(Stringa.format(json.dumps(self.transformed_data[key],indent=5)))
-            print(self.Backg_Default)
-            
+
             #print("Message:\n",message)
             #try:
-            returndictionary = reportobject.message_parser(message)
+            #returndictionary = reportobject.message_parser(message)
+            returndictionary = reportobject.message_parser_V2(self.transformed_data[key])
+            Stringa="{:}"         
+            print(Stringa.format(json.dumps(self.transformed_data[key],indent=5)))
+            print(self.Backg_Default)
             temp_report = dynamic_report("MESSAGE_PARSE",returndictionary,pars)
             temp_report.print_report(pars)
             temp_report.restore_configdata()

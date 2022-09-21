@@ -278,6 +278,18 @@ class report():
         self.compile_regex_groups("split_string")
         self.compile_regex_groups("message_parser")
 
+    def get_uncompiled_regex(self,group, key, subgroup=None):
+        if group in self.FIELDTRANSFORMSATTRIBUTES.keys():
+            if subgroup is None:
+                return self.FIELDTRANSFORMSATTRIBUTES[group][key]
+            else:
+                if subgroup in self.FIELDTRANSFORMSATTRIBUTES[group].keys():
+                    return self.FIELDTRANSFORMSATTRIBUTESFIELDTRANSFORMSATTRIBUTES[group][subgroup][key]
+                else:
+                    print("get_uncompiled_regex :subgroup {:} not found in myRegexDict".format(subgroup))
+        else:
+            print("get_uncompiled_regex :group {:} not found in myRegexDict".format(group))
+
 
     def get_regex(self,group,key, subgroup=None):
         if group in self.myRegexDict.keys():
@@ -850,6 +862,52 @@ class report():
         Retval= x.replace("active","A").replace("standby","S")
         return Retval
     
+    def message_parser_V2(self,messagedict):
+
+        def upper_match(match):
+            return match.group(1).upper()
+
+
+        #print("-------report_library.py:message_parser------------")
+        resultdict={}
+        for msg in messagedict.keys():
+            PayloadToParse= messagedict[msg].lower().strip()            
+            for MyRegexKey in self.myRegexDict["message_parser"].keys():
+                MyRegex=self.get_regex("message_parser",MyRegexKey)
+                ResultTemp=MyRegex.findall(PayloadToParse)
+                if ResultTemp:
+                    MyUncompiledRegex=self.get_uncompiled_regex("message_parser",MyRegexKey)
+                    ModifiedPayload = re.sub(MyUncompiledRegex,lambda x :  x.group(0).upper(),PayloadToParse)
+                    #print("message_parser_V2 \nUncompiledRegex(",MyRegexKey,"):",MyUncompiledRegex,"\nModified Payload:\n",ModifiedPayload)
+                    #print("Regex.findall:",ResultTemp,"\n")
+                    messagedict[msg]=ModifiedPayload
+                Result2=[]
+                for item in ResultTemp:
+                    if type(item)==tuple:
+                        for elem in item:
+                            Result2.append(elem)
+                    else:
+                        Result2.append(item)
+                Result =list(filter(None, Result2))
+                #print(Result)
+                #Result2=MyRegex.search(message)
+                if Result:
+                    if MyRegexKey not in resultdict.keys():
+                        resultdict[MyRegexKey]=[]
+                    for x in Result :
+                    #for x in Result.groups() :
+                        #print("X=",x)
+                        if x :
+                            if len(x)>0 and x not in resultdict[MyRegexKey]:
+                                #print(x,"--",type(x))
+                                resultdict[MyRegexKey].append(x)
+                    #print("\tResultdict:",resultdict[MyRegexKey])
+                #print("\tRegexKey:{:20s} \tResult:{:} \tResult2:{:} ".format(MyRegexKey, Result, Result2))
+                #except:
+                #    print("\tmessage_parser : error on re.search for key={:}".format(MyRegexKey))
+        #print(json.dumps(resultdict,indent=10))
+        return resultdict
+
     def message_parser(self,msglist):
         #print("-------report_library.py:message_parser------------")
         resultdict={}
