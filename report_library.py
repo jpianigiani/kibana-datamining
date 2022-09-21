@@ -275,21 +275,51 @@ class report():
         self.REPORTFIELDGROUP =self.Parameters_Configdata["Reports_Keys"]
         self.FIELDTRANSFORMSATTRIBUTES=self.Parameters_Configdata["FieldTransformsAttributes"]
         self.myRegexDict= {}
-        self.myMessageRegexDict={}
-        for Item in self.FIELDTRANSFORMSATTRIBUTES["split_string"].keys():
-            value = self.FIELDTRANSFORMSATTRIBUTES["split_string"][Item]
-            #print("DEBUG", Item, value)
-            self.myRegexDict[Item]=re.compile(value)
-        if "message_parser" in self.FIELDTRANSFORMSATTRIBUTES.keys():
-            #print(json.dumps(self.FIELDTRANSFORMSATTRIBUTES["message_parser"],indent=4))
-            for Item in self.FIELDTRANSFORMSATTRIBUTES["message_parser"].keys():
-                value = self.FIELDTRANSFORMSATTRIBUTES["message_parser"][Item]
-                #print("message_parser init:DEBUG", Item, value)
-                try:
-                    self.myMessageRegexDict[Item]=re.compile(value)       
-                except:
-                    print("ERROR IN compiling regex: ")
-                    print("Item:",Item, " Value:",value)
+        self.compile_regex_groups("split_string")
+        self.compile_regex_groups("message_parser")
+
+
+    def get_regex(self,group,key, subgroup=None):
+        if group in self.myRegexDict.keys():
+            if subgroup is None:
+                return self.myRegexDict[group][key]
+            else:
+                if subgroup in self.myRegexDict[group].keys():
+                    return self.myRegexDict[group][subgroup][key]
+                else:
+                    print("get_regex :subgroup {:} not found in myRegexDict".format(subgroup))
+        else:
+            print("get_regex :group {:} not found in myRegexDict".format(group))
+
+
+    def compile_regex_groups(self,group, subgroup=None):
+        if group in self.FIELDTRANSFORMSATTRIBUTES.keys():
+            if subgroup is None:
+                myDict=self.FIELDTRANSFORMSATTRIBUTES[group]
+                self.myRegexDict[group]={}
+                for Item in myDict.keys():
+                    value = myDict[Item]
+                    try:
+                        self.myRegexDict[group][Item]=re.compile(value)
+                    except:
+                        print("compile_regex_groups :ERROR IN compiling regex for group {:}: ".format(group))
+                        print("Item:",Item, " Value:",value)
+
+            else:
+                if subgroup in self.FIELDTRANSFORMSATTRIBUTES[group]:
+                    myDict=self.FIELDTRANSFORMSATTRIBUTES[group][subgroup]
+                    self.myRegexDict[group]={}
+                    for Item in myDict.keys():
+                        value = myDict[Item]
+                        try:
+                            self.myRegexDict[group][subgroup][Item]=re.compile(value)
+                        except:
+                            print("ERROR IN compiling regex for group {:}: ".format(group))
+                            print("Item:",Item, " Value:",value)
+                else:
+                    print("compile_regex_groups: subgroup {:} not present in application configdata json".format(subgroup))             
+        else:
+            print("compile_regex_groups: group {:} not present in application configdata json".format(group))                    
 
 
     def get_reporttype(self,customname=""):
@@ -744,7 +774,8 @@ class report():
 
 
     def split_string(self, inputstring, resulttype,join=[],joiner='-'):
-        Result= self.myRegexDict[resulttype].match(inputstring)
+        Regex = self.get_regex("split_string",resulttype)
+        Result= Regex.match(inputstring)
         if Result:
             #print(vmname,resulttype,Result, "-".join (Result.groups()))
             if len(join)==0:
@@ -823,14 +854,11 @@ class report():
         #print("-------report_library.py:message_parser------------")
         resultdict={}
         for msg in msglist:
-            message= msg.lower().strip()
-            startmessage=message
-            
-            for MyRegexKey in self.myMessageRegexDict.keys():
-                MyRegex=self.myMessageRegexDict[MyRegexKey]
+            message= msg.lower().strip()            
+            for MyRegexKey in self.myRegexDict["message_parser"].keys():
+                MyRegex=self.get_regex("message_parser",MyRegexKey)
                 #try:
                 #Result=MyRegex.search(message)
-
                 #print("-----   ---------")
                 ResultTemp=MyRegex.findall(message)
                 #print(type(ResultTemp))

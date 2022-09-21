@@ -13,7 +13,6 @@ from report_library import dynamic_report, parameters,report,menu
 import logging
 import re
 import getch
-import simple_term_menu
 
 
 
@@ -36,6 +35,8 @@ class kibanaminer():
     Black = '\033[90m'
     Backg_Yellow= '\033[1;42m'
     Backg_Default='\033[1;0m'
+    Backg_Red_ForeG_White= '\033[40;7m'+White
+    Backg_Green='\033[1;42m'
     Default = '\033[99m'
 
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -357,32 +358,85 @@ class kibanaminer():
                 reportobject.UpdateLastRecordValueByKey(field,self.transformed_data[item][field])
 
     def interactive(self, args):
+
         #src= input("continue?")
-        print(self.FAIL+"\t<CR>: Next\t-:Back\t<ESC> or q:Exit"+self.Yellow)
+        #print(self.FAIL+"\t<CR>: Next\t-:Back\t<ESC> or q:Exit"+self.Yellow)
         #charlist={'q':0,'Q':0,'-':-1,'\n':1,' ':1,'/':2,chr(27):0,'2':100,'1':10}
-        charlist={
-            "q":{"value":0,"action":"exit"},
-            "1":{"value":0,"action":"exit"},
-            chr(27):{"value":0,"action":"exit"},
-            "-":{"value":-1,"action":"delta"},
-            '\n':{"value":1,"action":"delta"},
-            chr(91)+chr(67):{"value":1,"action":"delta"},
-            "1":{"value":10,"action":"delta"},
-            "2":{"value":100,"action":"delta"},
-            "+":{"value":0}
-
-
+        InputCharacterMap={
+            "q":{"name":"Q","title":"Exit","value":0,"action":"exit"},
+            chr(27):{"name":"ESC","title":"Exit","value":0,"action":"exit"},
+            "-":{"name":"-","title":"Back 1 record","value":-1,"action":"delta"},
+            '\n':{"name":"CR","title":"Next record","value":1,"action":"delta"},
+            "1":{"name":"1","title":"+10 record","value":10,"action":"delta"},
+            "2":{"name":"2","title":"+30 record","value":30,"action":"delta"},
+            "3":{"name":"3","title":"+100 record","value":100,"action":"delta"},
+            "/":{"name":"/","title":"search","value":0,"action":"search", "exit":['\n','/','x1b']}
         }
-        
-        ch=''
-        action="delta"
-        while ch not in charlist.keys():
-            ch=getch.getch()
-            #print(ascii(ch))
-        retval=charlist[ch]["value"]
-        action= charlist[ch]["action"]
 
-        return retval, action
+        ExitActions=["delta","exit"]
+        OneChar=''
+        var_Continue=True
+        ListOfAllowedKeys=list(InputCharacterMap.keys())
+        MenuString=self.Backg_Red_ForeG_White
+        for Item in InputCharacterMap.keys():
+            MyDict=InputCharacterMap[Item]
+            MenuItem=" [{:1s}] {:16s}\t".format(InputCharacterMap[Item]["name"],InputCharacterMap[Item]["title"])
+            MenuString+=MenuItem
+        MenuString+=self.Backg_Default
+        print(MenuString)
+        while var_Continue:
+            CharSequence=''
+            while OneChar not in ListOfAllowedKeys:
+                OneChar=getch.getch()
+                #print(ascii(ch))
+                CharSequence+=OneChar.lower()
+            returnValue=InputCharacterMap[OneChar]["value"]
+            returnAction= InputCharacterMap[OneChar]["action"]
+
+            if returnAction in ExitActions:
+                var_Continue=False
+                returnFilter=None
+
+            if returnAction =="search":
+                MyDict=InputCharacterMap[OneChar]
+                CharSequence=''
+                OneChar=''
+                ExitSearch=False
+                MenuItem=self.Backg_Red_ForeG_White+"\tSEARCH : ESC or CR to exit\t"
+                count=0
+                AllowedInputs=['\n','\x1b']
+                for Item in self.FieldsList:
+                    MenuItem+="{:1d} {:10s}\t".format(count,Item)
+                    AllowedInputs.append(str(count))
+                    count+=1
+                print(MenuItem)
+                OneChar=''
+                CharSequence=''
+                while OneChar not  in AllowedInputs:
+                    OneChar=getch.getche()
+                if OneChar not in ['\n','\x1b']:
+                    value=int(OneChar)
+                    stringa=self.Backg_Red_ForeG_White+"\tsearch field {:} for the following value: "
+                    FieldName=self.FieldsList[value]
+                    print(stringa.format(FieldName.upper()))
+                    returnFilter={FieldName:""}
+                    CharSequence=''
+                    OneChar=''
+                    while OneChar not in MyDict["exit"]:
+                        OneChar=getch.getche()
+                        if OneChar not in MyDict["exit"]:
+                            CharSequence+=OneChar.lower()
+                    var_Continue=False
+                    returnFilter[FieldName]=CharSequence
+                    print("Return Filter:",returnFilter, self.Backg_Default)
+                else:
+                    var_Continue=True
+                    returnFilter=None
+
+        print("Retvalue:",returnValue," filter:", returnFilter, " action:",returnAction, self.Backg_Default)
+        
+        return returnValue, returnFilter, returnAction
+            
 
 
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -420,7 +474,6 @@ class kibanaminer():
             #print(Stringa.format(key,mylistlen))
             Stringa="{:}"
             print(Stringa.format(json.dumps(self.transformed_data[key],indent=5)))
-
             print(self.Backg_Default)
             
             #print("Message:\n",message)
@@ -434,11 +487,26 @@ class kibanaminer():
             #except:
             #    print("kibanaminer.py:scan_and_parse_messages - error searching {:} in {:}".format(key,message))
             if args.INTERACTIVE:
-                Delta, action=self.interactive(args)
-                if Delta==0:
-                    return 0
-                key+=Delta
-                key%= mylistlen
+                Delta, Filter, action=self.interactive(args)
+                
+                if action=="delta":
+                    key+=Delta
+                    key%= mylistlen
+                elif action=="exit":
+                    return False
+                elif action=="search":
+                    matchfound=False
+                    fieldname=list(Filter.keys())[0]
+                    MatchValue=Filter[fieldname]
+                    for counter in range(mylistlen):
+                        searchindex=(counter+key) % mylistlen
+                        FieldValue=self.transformed_data[searchindex][fieldname]
+                        if FieldValue.find(MatchValue)>-1:
+                            key=searchindex
+                            matchfound=True
+                            break
+                    if matchfound==False:
+                        print(self.FAIL," Did not find any match for {:} in field {:}".format(fieldname,MatchValue),self.Default)
             else:
                 key+=1
                 if key>=mylistlen:
