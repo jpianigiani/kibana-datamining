@@ -870,13 +870,16 @@ class report():
         #print("-------report_library.py:message_parser------------")
         resultdict={}
         for msg in messagedict.keys():
-            PayloadToParse= messagedict[msg].lower().strip()            
+            PayloadToParse= messagedict[msg].lower().strip()
+            ModifiedPayload=PayloadToParse            
             for MyRegexKey in self.myRegexDict["message_parser"].keys():
                 MyRegex=self.get_regex("message_parser",MyRegexKey)
                 ResultTemp=MyRegex.findall(PayloadToParse)
                 if ResultTemp:
                     MyUncompiledRegex=self.get_uncompiled_regex("message_parser",MyRegexKey)
-                    ModifiedPayload = re.sub(MyUncompiledRegex,lambda x :  menu.Backg_Red_ForeG_White+x.group(0).upper()+menu.Backg_Default,PayloadToParse)
+                    ModifiedPayload = re.sub(MyUncompiledRegex,
+                        lambda x :  menu.Backg_Red_ForeG_White+x.group(0).upper()+menu.Backg_Default,
+                        ModifiedPayload)
                     #print("message_parser_V2 \nUncompiledRegex(",MyRegexKey,"):",MyUncompiledRegex,"\nModified Payload:\n",ModifiedPayload)
                     #print("Regex.findall:",ResultTemp,"\n")
                     try:
