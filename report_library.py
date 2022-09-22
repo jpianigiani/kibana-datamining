@@ -862,15 +862,39 @@ class report():
         Retval= x.replace("active","A").replace("standby","S")
         return Retval
     
-    def message_parser_V2(self,messagedict):
 
-        def upper_match(match):
-            return match.group(1).upper()
+    def payload_json_parser(self, message):
+        TestDict={}
+        IsJSON=False
+        try:
+            # Message is native JSON
+            TestDict=json.loads(message)
+            IsJSON=True
+        except:
+            #Message is not native JSON: try key=value extraction
+            
+            ItemsList=message.split(' ')
+            #print("ItemsList:",ItemsList)
+            for Item in ItemsList:
+                kv_pair=Item.split('=')
+                if len(kv_pair)==2:
+                    TestDict[kv_pair[0]]=kv_pair[1]
+                    IsJSON=True
+            #print("TestDict:",TestDict)
+            #except:
+            #    print("ItemsList:",ItemsList)
+            #    print("TestDict:",TestDict)
+            #    TestDict={}
+            #    IsJSON=False
+        return IsJSON,TestDict
 
+    def message_parser(self,messagedict):
         #print("-------report_library.py:message_parser------------")
         resultdict={}
-        for msg in messagedict.keys():
-            PayloadToParse= messagedict[msg].lower().strip()
+        messagedict_withhighlights={}
+        JSONParsed_Dict={}
+        for myKey in messagedict.keys():
+            PayloadToParse= messagedict[myKey].lower().strip()
             ModifiedPayload=PayloadToParse            
             for MyRegexKey in self.myRegexDict["message_parser"].keys():
                 MyRegex=self.get_regex("message_parser",MyRegexKey)
@@ -878,17 +902,16 @@ class report():
                 if ResultTemp:
                     MyUncompiledRegex=self.get_uncompiled_regex("message_parser",MyRegexKey)
                     ModifiedPayload = re.sub(MyUncompiledRegex,
+                        #lambda x :  menu.BackgRedBlink+x.group(0).upper()+menu.Default+menu.Backg_Default,
                         lambda x :  menu.Backg_Red_ForeG_White+x.group(0).upper()+menu.Backg_Default,
                         ModifiedPayload)
+                    messagedict_withhighlights[myKey]=ModifiedPayload
                     #print("message_parser_V2 \nUncompiledRegex(",MyRegexKey,"):",MyUncompiledRegex,"\nModified Payload:\n",ModifiedPayload)
                     #print("Regex.findall:",ResultTemp,"\n")
-                    try:
-                        TestDict=json.loads(messagedict[msg])
-                        IsJSON=True
-                        print(json.dumps(TestDict,indent=3))
-                    except:
-                        IsJSON=False
-                    messagedict[msg]=ModifiedPayload
+                messagedict_withhighlights[myKey]=ModifiedPayload
+                IsJSON,TestDict= self.payload_json_parser(PayloadToParse)
+                if IsJSON:
+                    JSONParsed_Dict[myKey]=TestDict
                 Result2=[]
                 for item in ResultTemp:
                     if type(item)==tuple:
@@ -909,52 +932,14 @@ class report():
                             if len(x)>0 and x not in resultdict[MyRegexKey]:
                                 #print(x,"--",type(x))
                                 resultdict[MyRegexKey].append(x)
+                                
                     #print("\tResultdict:",resultdict[MyRegexKey])
                 #print("\tRegexKey:{:20s} \tResult:{:} \tResult2:{:} ".format(MyRegexKey, Result, Result2))
                 #except:
                 #    print("\tmessage_parser : error on re.search for key={:}".format(MyRegexKey))
         #print(json.dumps(resultdict,indent=10))
-        return resultdict
-
-    def message_parser(self,msglist):
-        #print("-------report_library.py:message_parser------------")
-        resultdict={}
-        for msg in msglist:
-            message= msg.lower().strip()            
-            for MyRegexKey in self.myRegexDict["message_parser"].keys():
-                MyRegex=self.get_regex("message_parser",MyRegexKey)
-                #try:
-                #Result=MyRegex.search(message)
-                #print("-----   ---------")
-                ResultTemp=MyRegex.findall(message)
-                #print(type(ResultTemp))
-                #for Item in ResultTemp:
-                Result2=[]
-                for item in ResultTemp:
-                    if type(item)==tuple:
-                        for elem in item:
-                            Result2.append(elem)
-                    else:
-                        Result2.append(item)
-                Result =list(filter(None, Result2))
-                #print(Result)
-                #Result2=MyRegex.search(message)
-                if Result:
-                    if MyRegexKey not in resultdict.keys():
-                        resultdict[MyRegexKey]=[]
-                    for x in Result :
-                    #for x in Result.groups() :
-                        #print("X=",x)
-                        if x :
-                            if len(x)>0 and x not in resultdict[MyRegexKey]:
-                                #print(x,"--",type(x))
-                                resultdict[MyRegexKey].append(x)
-                    #print("\tResultdict:",resultdict[MyRegexKey])
-                #print("\tRegexKey:{:20s} \tResult:{:} \tResult2:{:} ".format(MyRegexKey, Result, Result2))
-                #except:
-                #    print("\tmessage_parser : error on re.search for key={:}".format(MyRegexKey))
-        #print(json.dumps(resultdict,indent=10))
-        return resultdict
+        
+        return resultdict,messagedict_withhighlights,JSONParsed_Dict
 
     
     def calc_max_percentage(self,num1, den1, num2, den2):
@@ -1091,6 +1076,7 @@ class menu:
     Backg_Green= '\033[1;42m'
     Backg_Default='\033[1;0m'
     Backg_Red_ForeG_White= '\033[40;7m'+White
+    BackgRedBlink='\033[41;5m'
     Default = '\033[99m'
 
     ColorsList =(OKBLUE,OKCYAN,OKGREEN,WARNING,FAIL,White,Yellow,Magenta,Grey)

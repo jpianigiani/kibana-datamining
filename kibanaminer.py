@@ -13,6 +13,7 @@ from report_library import dynamic_report, parameters,report,menu
 import logging
 import re
 import getch
+import textwrap
 
 
 
@@ -58,6 +59,8 @@ class kibanaminer():
         self.DEBUG=args.DEBUG
         if self.DEBUG:
             print("DEBUG Mode")
+        self.screenrows, self.screencolumns = os.popen('stty size', 'r').read().split()
+        self.ScreenWitdh = int(self.screencolumns)
 
 #------------------------------------------------------------------------------------------------------------------------------------
     def set_filter(self, args):
@@ -437,8 +440,10 @@ class kibanaminer():
         
         return returnValue, returnFilter, returnAction
             
-
-
+    def indent(self,text, amount, ch=' '):
+        length=len(text)
+        width=self.ScreenWitdh
+        
 #------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------------------
     def scan_and_parse_messages(self, args,reportobject, pars):
@@ -477,13 +482,20 @@ class kibanaminer():
             #print("Message:\n",message)
             #try:
             #returndictionary = reportobject.message_parser(message)
-            returndictionary = reportobject.message_parser_V2(self.transformed_data[key])
+            returndictionary, modifiedrecord, JSONParsedrecord = reportobject.message_parser(self.transformed_data[key])
             Stringa="{:}"         
             #print(Stringa.format(json.dumps(self.transformed_data[key],indent=5)))
-            for k,v in self.transformed_data[key].items():
+            for k,v in modifiedrecord.items(): #self.transformed_data[key].items():  
+                #print("----------ORIGINAL VALUE ---------------")
                 Stringa=self.Default+"{:20s}".format(k)
                 Stringa1=Stringa+" : "+"{:}".format(v)
                 print(Stringa1)
+                if k in JSONParsedrecord:
+                    print("\t--------------JSON PARSED VALUE -----------")
+                    JSON_Parsed_Value=json.dumps(JSONParsedrecord[k],indent=3)
+                    IndentedJSON=re.sub('\n','\n'+26*' ',JSON_Parsed_Value)
+                    Stringa1=Stringa+" : "+"{:}".format(IndentedJSON)
+                    print(Stringa1)
             print(self.Backg_Default)
             temp_report = dynamic_report("MESSAGE_PARSE",returndictionary,pars)
             temp_report.print_report(pars)

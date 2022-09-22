@@ -104,16 +104,18 @@
                     "vendor": "(jnp|msw|mav|hpe|nok|netcracker|rhel|junos|contrail)",
                     "uuid":"([a-z,0-9]{8}[-][a-z,0-9]{4}[-][a-z,0-9]{4}[-][a-z,0-9]{4}[-][a-z,0-9]{11})",
                     "method": "\b(get|post|put)\b",
+                    
+                    "api call":"((get|post|put|http|https)[ :]([\\.:\\-\\?\\=_\/a-z0-9]+))",
                     "response":"(200 ok)",
                     "errors":"\b(warn|debug|error)",
                     "lineup":"(\\w{3,}-[a-z,A-Z]{3}[0-9]{3}[-][a-z,A-Z][0-9]{2})",
                     "RepoName":"([a-z,A-Z]{3}[0-9]{3}[-]\\w{3,}-[a-z,A-Z][0-9]{2})",
                     "error":"(error[:= |=]\\w{1,})",
+                    "hpe_error":"\"\"severity\"\":\"\"error\"\"",
                     "mav_vnfname":"(pcrt|pcmp|pccd|cram|scbc|cmem|crdb|ecac|ecxc|sccc|sdcc|vnfm)",
                     "url":"^((http[s]?|ftp):\/)?\/?([^:\/\\s]+)((\/\\w+)*\/)([\\w\\-\\.]+[^#?\\s]+)(.*)?(#[\\w\\-]+)?$",
                     "username":"(user|username)[=:](\\w+)",
-                    "vim_error":"error repoted by vim",
-                    "api call":"\b(get|post|put)(.+)\b"
+                    "vim_error":"error repoted by vim"
 
                         }
     }
