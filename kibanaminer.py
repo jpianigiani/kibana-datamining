@@ -153,8 +153,8 @@ class kibanaminer():
 
         if AddTimeFilter==False:
                 #print("range key present")
-                QueryItem["range"]["@timestamp"]["gte"]=args.FROM
-                QueryItem["range"]["@timestamp"]["lte"]=args.TO
+                QueryItem["range"]["@timestamp"]["gte"]=self.QueryFrom
+                QueryItem["range"]["@timestamp"]["lte"]=self.QueryTo
         else :
                 QueryFilterRoot={
                     "range": 
@@ -204,7 +204,7 @@ class kibanaminer():
                             "multi_match": {
                                 #"type": "phrase",
                                 "type": "phrase",
-                                "query": "FREE TEXT SEARCH",
+                                "query": "wordtomatchhere",
                                 "lenient": True
                                 }
                             })
@@ -216,22 +216,20 @@ class kibanaminer():
                         count+=1
 
 
-                count=0
-                QueryFilterItem=[]
+
                 if self.localRegexDict["EXCLUDEWORDSFLAG"]:
                     for WordToAdd in args.EXCLUDEWORDS:
                         QueryFilterItem.append({
                                 "bool": {
-                                    "must_not": {
-                                        "phrase": 
-                                            {
-                                            "type": "best_fields",
-                                            "query": "TEXTTOEXCLUDE",
-                                            "lenient": True
-                                        }
+                                "must_not": {
+                                    "multi_match": {
+                                    "type": "phrase",
+                                    "query": "WORDTOEXCLUDEGOESHERE",
+                                    "lenient": True
                                     }
                                 }
-                            })
+                                }
+                            } )
                         QueryFilterItem[count]["bool"]["must_not"]["multi_match"]["query"]=WordToAdd
                         QueryFilterRoot["bool"]["filter"].append(QueryFilterItem[count])
                         #print("Adding excludeword : ",WordToAdd)
@@ -280,7 +278,7 @@ class kibanaminer():
             # if no "include word" is present, then all records are considered to be included. 
             #Otherwise all record are not included and they are included only if regex matches
             if self.localRegexDict["WORDSFLAG"]:
-                IncludeRecord=True
+                IncludeRecord=False
             else:
                 IncludeRecord=True
             ExcludeRecord=False
@@ -302,7 +300,7 @@ class kibanaminer():
                 except:
                     value=stringvalue.lower()
 
-                if False:
+                if True:
                     if self.localRegexDict["WORDSFLAG"]:
                         WordsMatchResult=self.localRegexDict["WORDS"].findall(value)
                         if WordsMatchResult:
@@ -372,30 +370,36 @@ class kibanaminer():
             #["time","timestamp","_index","host","ident","severity","message"]
                 reportobject.UpdateLastRecordValueByKey(field,self.transformed_data[item][field])
 
-    def interactive(self, args):
+    def interactive(self, args, DirectionValue):
 
         #src= input("continue?")
         #print(self.FAIL+"\t<CR>: Next\t-:Back\t<ESC> or q:Exit"+self.Yellow)
         #charlist={'q':0,'Q':0,'-':-1,'\n':1,' ':1,'/':2,chr(27):0,'2':100,'1':10}
+        if DirectionValue==1:
+            DirectionChar='+'
+        else:
+            DirectionChar='-'       
+
         InputCharacterMap={
             "q":{"name":"Q","title":"Exit","value":0,"action":"exit"},
             chr(27):{"name":"ESC","title":"Exit","value":0,"action":"exit"},
-            "-":{"name":"-","title":"Back 1 record","value":-1,"action":"delta"},
-            '\n':{"name":"CR","title":"Next record","value":1,"action":"delta"},
-            "1":{"name":"1","title":"+10 record","value":10,"action":"delta"},
-            "2":{"name":"2","title":"+30 record","value":30,"action":"delta"},
-            "3":{"name":"3","title":"+100 record","value":100,"action":"delta"},
-            "/":{"name":"/","title":"search","value":0,"action":"search", "exit":['\n','/','x1b']}
+            "-":{"name":"-","title":"Previous","value":-1,"action":"delta"},
+            '\n':{"name":"CR","title":DirectionChar+"1 record","value":1,"action":"delta"},
+            "1":{"name":"1","title":DirectionChar+"10 record","value":10,"action":"delta"},
+            "2":{"name":"2","title":DirectionChar+"30 record","value":30,"action":"delta"},
+            "3":{"name":"3","title":DirectionChar+"100 record","value":100,"action":"delta"},
+            "/":{"name":"/","title":"search","value":0,"action":"search", "exit":['\n','/','x1b']},
+            " ":{"name":"<Space>","title":"Direction"+DirectionChar,"value":0,"action":"change"}
         }
 
-        ExitActions=["delta","exit"]
+        ExitActions=["delta","exit", "change"]
         OneChar=''
         var_Continue=True
         ListOfAllowedKeys=list(InputCharacterMap.keys())
         MenuString=self.Backg_Red_ForeG_White
         for Item in InputCharacterMap.keys():
             MyDict=InputCharacterMap[Item]
-            MenuItem=" [{:1s}] {:16s}\t".format(InputCharacterMap[Item]["name"],InputCharacterMap[Item]["title"])
+            MenuItem=" [{:1s}] {:12s}   ".format(InputCharacterMap[Item]["name"],InputCharacterMap[Item]["title"])
             MenuString+=MenuItem
         MenuString+=self.Backg_Default
         print(MenuString)
@@ -405,12 +409,14 @@ class kibanaminer():
                 OneChar=getch.getch()
                 #print(ascii(ch))
                 CharSequence+=OneChar.lower()
-            returnValue=InputCharacterMap[OneChar]["value"]
             returnAction= InputCharacterMap[OneChar]["action"]
 
             if returnAction in ExitActions:
+                if returnAction=="change":
+                    DirectionValue=-1*DirectionValue
                 var_Continue=False
                 returnFilter=None
+                returnValue=InputCharacterMap[OneChar]["value"]*DirectionValue
 
             if returnAction =="search":
                 MyDict=InputCharacterMap[OneChar]
@@ -443,14 +449,14 @@ class kibanaminer():
                             CharSequence+=OneChar.lower()
                     var_Continue=False
                     returnFilter[FieldName]=CharSequence
-                    print("Return Filter:",returnFilter, self.Backg_Default)
+                    #print("Return Filter:",returnFilter, self.Backg_Default)
                 else:
                     var_Continue=True
                     returnFilter=None
 
         print("Retvalue:",returnValue," filter:", returnFilter, " action:",returnAction, self.Backg_Default)
         
-        return returnValue, returnFilter, returnAction
+        return returnValue, returnFilter, returnAction, DirectionValue
             
     def indent(self,text, amount, ch=' '):
         length=len(text)
@@ -479,7 +485,7 @@ class kibanaminer():
         #for key in self.transformed_data.keys():
         GoOn=True
 
-
+        Direction=1
         while GoOn:
             #print("key:",key, " len of keys:",mylistlen)
             #message=[ self.transformed_data[key]["_index"], self.transformed_data[key]["message"]]
@@ -530,8 +536,10 @@ class kibanaminer():
             #except:
             #    print("kibanaminer.py:scan_and_parse_messages - error searching {:} in {:}".format(key,message))
             if args.INTERACTIVE:
-                Delta, Filter, action=self.interactive(args)
-                
+
+                Delta, Filter, action,DirectionRetval=self.interactive(args, Direction)
+                print("Directionvalue=",DirectionRetval)
+                Direction=DirectionRetval
                 if action=="delta":
                     key+=Delta
                     key%= mylistlen
