@@ -880,6 +880,10 @@ class report():
                 if len(kv_pair)==2:
                     TestDict[kv_pair[0]]=kv_pair[1]
                     IsJSON=True
+                kv_pair=Item.split(":")
+                if len(kv_pair)==2:
+                    TestDict[kv_pair[0]]=kv_pair[1]
+                    IsJSON=True
             #print("TestDict:",TestDict)
             #except:
             #    print("ItemsList:",ItemsList)

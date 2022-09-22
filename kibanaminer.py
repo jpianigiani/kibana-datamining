@@ -7,7 +7,8 @@ import requests
 import math
 import os, sys
 import argparse
-import datetime
+from datetime import datetime,timedelta
+import time
 import string
 import dateutil.parser as dparser
 from report_library import dynamic_report, parameters,report,menu
@@ -41,6 +42,30 @@ class kibanaminer():
     Backg_Green='\033[1;42m'
     Default = '\033[99m'
 
+    QueryFilter_IncludeBlock= {
+                                "bool": {
+                                    "must_not": {
+                                        "phrase": 
+                                            {
+                                            "type": "best_fields",
+                                            "query": "TEXTTOEXCLUDE",
+                                            "lenient": True
+                                        }
+                                    }
+                                }
+                            }
+    QueryFilter_ExcludeBlock={
+                                "bool": {
+                                    "must_not": {
+                                        "phrase": 
+                                            {
+                                            "type": "best_fields",
+                                            "query": "TEXTTOEXCLUDE",
+                                            "lenient": True
+                                        }
+                                    }
+                                }
+                            }
 #------------------------------------------------------------------------------------------------------------------------------------
 
     def __init__(self, args):
@@ -63,8 +88,23 @@ class kibanaminer():
         self.screenrows, self.screencolumns = os.popen('stty size', 'r').read().split()
         self.ScreenWitdh = int(self.screencolumns)
 
+    def parse_date(self, val, returntype="kibana"):
+        dateregex="^((0?[13578]|10|12)(-|\/)(([1-9])|(0[1-9])|([12])([0-9]?)|(3[01]?))(-|\/)((19)([2-9])(\\d{1})|(20)([01])(\\d{1})|([8901])(\\d{1}))|(0?[2469]|11)(-|\/)(([1-9])|(0[1-9])|([12])([0-9]?)|(3[0]?))(-|\/)((19)([2-9])(\\d{1})|(20)([01])(\\d{1})|([8901])(\\d{1})))$"
+        timeregex="([0-9]{2}[:][0-9]{2}[:][0-9]{2})"
+        dateresult=re.findall(dateregex,val)
+        timeresult=re.findall(timeregex,val)
+        if dateresult:
+            print("dateresult:",dateresult)
+            print("timeresult:",timeresult)
+
 #------------------------------------------------------------------------------------------------------------------------------------
     def set_filter(self, args):
+
+        self.parse_date(args.FROM)
+        self.QueryFrom=args.FROM
+        #self.QueryFrom_DateTime=datetime.strptime(self.QueryFrom,"%Y-%m-%d %H:%M:%S")
+        self.QueryTo=args.TO
+        #self.QueryTo_DateTime=datetime.strptime(self.QueryTo,"%Y-%m-%d %H:%M:%S")
 
         self.localRegexDict={}
         if args.WORDS:
@@ -111,14 +151,12 @@ class kibanaminer():
                 AddTimeFilter=False
                 break
 
-        
-
         if AddTimeFilter==False:
                 #print("range key present")
                 QueryItem["range"]["@timestamp"]["gte"]=args.FROM
                 QueryItem["range"]["@timestamp"]["lte"]=args.TO
         else :
-                Tmp={
+                QueryFilterRoot={
                     "range": 
                         {
                             "@timestamp": 
@@ -129,9 +167,9 @@ class kibanaminer():
                                 }
                         }
                     }
-                Tmp["range"]["@timestamp"]["gte"]=args.FROM
-                Tmp["range"]["@timestamp"]["lte"]=args.TO       
-                filterlist.append(Tmp)
+                QueryFilterRoot["range"]["@timestamp"]["gte"]=args.FROM
+                QueryFilterRoot["range"]["@timestamp"]["lte"]=args.TO       
+                filterlist.append(QueryFilterRoot)
 
         for QueryItem in filterlist:
             #print(QueryItem)
@@ -141,7 +179,7 @@ class kibanaminer():
             print("UNHANDLED!")
             exit(-1)
         else :
-                Tmp=        {
+                QueryFilterRoot=        {
                             "bool": {
                                         "filter": [
      
@@ -151,35 +189,41 @@ class kibanaminer():
 
                 #print("args.WORDS:",args.WORDS)
                 count=0
-                Tmp3=[]
-                if args.WORDS:
-
+                QueryFilterItem=[]
+                if self.localRegexDict["WORDSFLAG"]:
                     for WordToAdd in args.WORDS:
-                        
-                        Tmp3.append({
+                        #QueryFilterItem.append({
+                        #    "multi_match": {
+                        #        "type": "best_fields",
+                        #        "query": "FREE TEXT SEARCH",
+                        #        "lenient": True
+                        #        }
+                        #    })
+                        #QueryFilterItem[count]["multi_match"]["query"]=WordToAdd                     
+                        QueryFilterItem.append({
                             "multi_match": {
-                                "type": "best_fields",
+                                #"type": "phrase",
+                                "type": "phrase",
                                 "query": "FREE TEXT SEARCH",
                                 "lenient": True
                                 }
                             })
-                        Tmp3[count]["multi_match"]["query"]=WordToAdd
-                        Tmp["bool"]["filter"].append(Tmp3[count])
+                        QueryFilterItem[count]["multi_match"]["query"]=WordToAdd
+                        QueryFilterRoot["bool"]["filter"].append(QueryFilterItem[count])
                         #print("Adding word : ",WordToAdd)
-                        #print(Tmp3)
-                        #print(Tmp)
+                        #print(QueryFilterItem)
+                        #print(QueryFilterRoot)
                         count+=1
 
 
                 count=0
-                Tmp3=[]
-                if args.EXCLUDEWORDS:
-
+                QueryFilterItem=[]
+                if self.localRegexDict["EXCLUDEWORDSFLAG"]:
                     for WordToAdd in args.EXCLUDEWORDS:
-                        Tmp3.append({
+                        QueryFilterItem.append({
                                 "bool": {
                                     "must_not": {
-                                        "multi_match": 
+                                        "phrase": 
                                             {
                                             "type": "best_fields",
                                             "query": "TEXTTOEXCLUDE",
@@ -188,13 +232,13 @@ class kibanaminer():
                                     }
                                 }
                             })
-                        Tmp3[count]["bool"]["must_not"]["multi_match"]["query"]=WordToAdd
-                        Tmp["bool"]["filter"].append(Tmp3[count])
+                        QueryFilterItem[count]["bool"]["must_not"]["multi_match"]["query"]=WordToAdd
+                        QueryFilterRoot["bool"]["filter"].append(QueryFilterItem[count])
                         #print("Adding excludeword : ",WordToAdd)
-                        #print(Tmp3)
-                        #print(Tmp)
+                        #print(QueryFilterItem)
+                        #print(QueryFilterRoot)
                         count+=1
-                filterlist.append(Tmp)
+                filterlist.append(QueryFilterRoot)
         print(json.dumps(self.query, indent=5))
 
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -206,46 +250,6 @@ class kibanaminer():
         with open("kibanaminer.out","w") as file1:
             file1.write(json.dumps(self.queryresult,indent=10))
 #------------------------------------------------------------------------------------------------------------------------------------
-
-    def transform_data(self):
-        self.count=0
-        recno=0    
-        self.transformed_data={}
-        myindex=0
-        for FIELD in self.FieldsList:
-            for x in self.get_recursively(self.queryresult,FIELD):
-                if FIELD=="time":
-                    myindex=float(x)
-                if recno==0:
-                    #TMP[str(count)]={}
-                    self.transformed_data[self.count]={}
-
-                try:
-                    #TMP[str(count)][FIELD]=x
-                    self.transformed_data[self.count][FIELD]=x
-
-                except:
-                    pass
-
-                    print("--------------------------------------------------------")
-                    print(json.dumps(self.transformed_data,indent=4))
-                    print("--------------------------------------------------------")
-                    #print("JSON Keys of self.transformed_data: {:} \n {:}".format(len(self.transformed_data.keys()),self.transformed_data.keys()))
-                    print("recno=",recno)
-                    print("count=",self.count)
-                    print("Field=",FIELD)
-                    print("X=",x)
-
-                    #exit(-1)
-                    #src=input("Continue?")
-                #print(TMP)
-                self.count+=1
-            recno+=1
-            self.count=0     
-        #print("--------------------------------------------------------")
-        #print(json.dumps(self.transformed_data,indent=10))
-        #exit(-1)
-
 
 #------------------------------------------------------------------------------------------------------------------------------------
 
@@ -276,7 +280,7 @@ class kibanaminer():
             # if no "include word" is present, then all records are considered to be included. 
             #Otherwise all record are not included and they are included only if regex matches
             if self.localRegexDict["WORDSFLAG"]:
-                IncludeRecord=False
+                IncludeRecord=True
             else:
                 IncludeRecord=True
             ExcludeRecord=False
@@ -298,7 +302,7 @@ class kibanaminer():
                 except:
                     value=stringvalue.lower()
 
-                if True:
+                if False:
                     if self.localRegexDict["WORDSFLAG"]:
                         WordsMatchResult=self.localRegexDict["WORDS"].findall(value)
                         if WordsMatchResult:
@@ -460,7 +464,11 @@ class kibanaminer():
         #print("lines:",lines," length:",length," writable space:",writablespace)
         #print("retval:",retval)
         return retval
-        
+
+    def new_query_timewindow(self, args):
+        pass
+
+
 #------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------------------
     def scan_and_parse_messages(self, args,reportobject, pars):
@@ -490,7 +498,7 @@ class kibanaminer():
             #print("MESSAGE:", message)
             print(self.Backg_Yellow)
             Stringa0="{0:_^"+str(pars.ScreenWitdh)+"}"
-            Stringa1=" RECORD: {:3d} OF {:3d}  (from {:} to {:})".format(key,mylistlen,self.Tstart,self.Tend)
+            Stringa1=" RECORD: {:3d} OF {:3d}  (from {:s} to {:s})".format(key,mylistlen,self.Tstart,self.Tend)
             Stringa=Stringa0.format(Stringa1)
             Stringa+=self.Backg_Default
             print(Stringa)
@@ -548,7 +556,9 @@ class kibanaminer():
                 key+=1
                 if key>=mylistlen:
                     return False
-            
+
+
+
 #------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------------------
 def main(arguments):
@@ -556,8 +566,8 @@ def main(arguments):
     MyPars=parameters(programname)
     MyReport=report(MyPars)
     parser = argparse.ArgumentParser()
-    CurrentTime = datetime.datetime.now()
-    DefaultFromTime=CurrentTime-datetime.timedelta(hours=24)
+    CurrentTime = datetime.now()
+    DefaultFromTime=CurrentTime-timedelta(hours=24)
     DefaultTo= CurrentTime.strftime("%Y-%m-%dT%H:%M:%S.000Z")
     DefaultFrom= DefaultFromTime.strftime("%Y-%m-%dT%H:%M:%S.000Z")
     parser.add_argument("-f","--FROM",help="Specify from when to start fetching logs (%Y-%m-%dT%H:%M:%S.000Z). If omitted=Now-1day", default=DefaultFrom, required=False)
