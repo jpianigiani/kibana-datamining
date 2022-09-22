@@ -4,6 +4,7 @@
 from itertools import count
 import json
 import requests
+import math
 import os, sys
 import argparse
 import datetime
@@ -67,6 +68,7 @@ class kibanaminer():
 
         self.localRegexDict={}
         if args.WORDS:
+            print("Words to include:", args.WORDS)
             Regexstring="("+"|".join(args.WORDS)+")"
             print("WORDS: RegexString:",Regexstring)
 
@@ -81,8 +83,10 @@ class kibanaminer():
             self.localRegexDict["WORDSFLAG"]=False
         
         if args.EXCLUDEWORDS:
+            print("Words to exclude:", args.EXCLUDEWORDS)
             Regexstring="("+"|".join(args.EXCLUDEWORDS)+")"
             print("EXCLUDE WORDS: RegexString:",Regexstring)
+
             self.localRegexDict["EXCLUDEWORDSREGEX"]=Regexstring
 
             self.localRegexDict["EXCLUDEWORDS"]=re.compile(Regexstring)
@@ -259,22 +263,24 @@ class kibanaminer():
             print("--------------------------------------------")            
             print("TOTAL RECORDS FROM KIBANA: ", self.RECCOUNT)
             print("--------------------------------------------")            
-
+        
+        if self.DEBUG:
+            print("self.localRegexDict['WORDSFLAG']:",self.localRegexDict["WORDSFLAG"]," self.localRegexDict['EXCLUDEWORDSFLAG']:",self.localRegexDict["EXCLUDEWORDSFLAG"])
+            
         for record in self.queryresult["hits"]["hits"]:
             if self.DEBUG:
                 print(self.OKGREEN+"--------------------------------------------")            
-                print("Record # {:} of {:}", self.count,self.RECCOUNT)
+                print("Record # {:} of {:}".format( self.count,self.RECCOUNT))
                 print("--------------------------------------------"+self.Yellow)            
             #self.transformed_data[self.count]={}
+            # if no "include word" is present, then all records are considered to be included. 
+            #Otherwise all record are not included and they are included only if regex matches
             if self.localRegexDict["WORDSFLAG"]:
                 IncludeRecord=False
             else:
                 IncludeRecord=True
+            ExcludeRecord=False
 
-            if self.localRegexDict["EXCLUDEWORDSFLAG"]:
-                ExcludeRecord=True
-            else:
-                ExcludeRecord=False
             temp_result={}
             for mykey in self.FieldsList:
                 if mykey in record.keys():
@@ -292,31 +298,31 @@ class kibanaminer():
                 except:
                     value=stringvalue.lower()
 
+                if True:
+                    if self.localRegexDict["WORDSFLAG"]:
+                        WordsMatchResult=self.localRegexDict["WORDS"].findall(value)
+                        if WordsMatchResult:
+                            IncludeRecord=True
+                            if self.DEBUG:
+                                print(self.Yellow+"value:",value, 
+                                    self.Grey+" Regex:", self.localRegexDict["WORDSREGEX"],
+                                    self.OKBLUE+" WordsMAtchResult=",WordsMatchResult,self.Yellow)
+                        else:
+                            pass
+                            #print(self.Yellow+"value:",value, 
+                            #    self.Grey+" Regex:", 
+                            #    self.localRegexDict["WORDSREGEX"],
+                            #    self.Yellow+" no match")                        
 
-                if self.localRegexDict["WORDSFLAG"]:
-                    WordsMatchResult=self.localRegexDict["WORDS"].findall(value)
-                    if WordsMatchResult:
-                        IncludeRecord=True
-                        if self.DEBUG:
-                            print(self.Yellow+"value:",value, 
-                                self.Grey+" Regex:", self.localRegexDict["WORDSREGEX"],
-                                self.OKBLUE+" WordsMAtchResult=",WordsMatchResult,self.Yellow)
-                    else:
-                        pass
-                        #print(self.Yellow+"value:",value, 
-                        #    self.Grey+" Regex:", 
-                        #    self.localRegexDict["WORDSREGEX"],
-                        #    self.Yellow+" no match")                        
-
-                if self.localRegexDict["EXCLUDEWORDSFLAG"]:
-                    ExcludeWordsMatchResult=self.localRegexDict["EXCLUDEWORDS"].findall(value)
-                    if ExcludeWordsMatchResult:
-                        ExcludeRecord=True
-                        IncludeRecord=False
-                        if self.DEBUG:
-                            print(self.Yellow+"value:",value, 
-                                self.Grey+" Regex:", self.localRegexDict["EXCLUDEWORDSREGEX"],
-                                self.FAIL+" ExcludeWordsMatchResult=",ExcludeWordsMatchResult,self.Yellow)
+                    if self.localRegexDict["EXCLUDEWORDSFLAG"]:
+                        ExcludeWordsMatchResult=self.localRegexDict["EXCLUDEWORDS"].findall(value)
+                        if ExcludeWordsMatchResult:
+                            ExcludeRecord=True
+                            IncludeRecord=False
+                            if self.DEBUG:
+                                print(self.Yellow+"value:",value, 
+                                    self.Grey+" Regex:", self.localRegexDict["EXCLUDEWORDSREGEX"],
+                                    self.FAIL+" ExcludeWordsMatchResult=",ExcludeWordsMatchResult,self.Yellow)
                     else:
                         pass
                         #print(self.Yellow+"value:",value, 
@@ -330,17 +336,19 @@ class kibanaminer():
                 self.transformed_data[self.count]=temp_result
                 if self.DEBUG:
                     print("Count:",self.count,"  added:")
+                if self.count==0:
+                    self.Tstart=self.transformed_data[self.count]["@timestamp"]
                 self.count+=1
             else:
                 self.ExcludedCounter+=1
                 if self.DEBUG:
                     print("\tExcluded records due to Preliminary Regex: {:}".format(self.ExcludedCounter))
-
         if self.count==0:
             print("----------------------------------------------------------------------------")
             print("transform_data2: returned 0 records post additional filtering on query data")
             print("----------------------------------------------------------------------------")
             exit(-1)
+        self.Tend=self.transformed_data[self.count-1]["@timestamp"]
         with open("kibanaminer.short.out","w") as file1:
             file1.write(json.dumps(self.transformed_data,indent=10))
 
@@ -443,6 +451,15 @@ class kibanaminer():
     def indent(self,text, amount, ch=' '):
         length=len(text)
         width=self.ScreenWitdh
+        writablespace=width-amount-1
+        lines=math.ceil(length/writablespace)
+        retval=""
+        for count in range(lines):
+            retval+=amount*ch+ text[count*writablespace: min((count+1)*writablespace,length-count*writablespace)]
+        #print("Text:",text)
+        #print("lines:",lines," length:",length," writable space:",writablespace)
+        #print("retval:",retval)
+        return retval
         
 #------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -473,7 +490,7 @@ class kibanaminer():
             #print("MESSAGE:", message)
             print(self.Backg_Yellow)
             Stringa0="{0:_^"+str(pars.ScreenWitdh)+"}"
-            Stringa1=" RECORD: {:3d} OF {:3d} ".format(key,mylistlen)
+            Stringa1=" RECORD: {:3d} OF {:3d}  (from {:} to {:})".format(key,mylistlen,self.Tstart,self.Tend)
             Stringa=Stringa0.format(Stringa1)
             Stringa+=self.Backg_Default
             print(Stringa)
@@ -491,7 +508,7 @@ class kibanaminer():
                 Stringa1=Stringa+" : "+"{:}".format(v)
                 print(Stringa1)
                 if k in JSONParsedrecord:
-                    print("\t--------------JSON PARSED VALUE -----------")
+                    print(self.Backg_Default+self.Default+"--------------JSON PARSED VALUE -----------")
                     JSON_Parsed_Value=json.dumps(JSONParsedrecord[k],indent=3)
                     IndentedJSON=re.sub('\n','\n'+26*' ',JSON_Parsed_Value)
                     Stringa1=Stringa+" : "+"{:}".format(IndentedJSON)
@@ -525,10 +542,12 @@ class kibanaminer():
                             break
                     if matchfound==False:
                         print(self.FAIL," Did not find any match for {:} in field {:}".format(fieldname,MatchValue),self.Default)
+                elif action=="next":
+                    return True
             else:
                 key+=1
                 if key>=mylistlen:
-                    return True
+                    return False
             
 #------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -553,10 +572,12 @@ def main(arguments):
     args=parser.parse_args()
 
     MyKibana=kibanaminer(args)
-    MyKibana.set_filter(args)
-    MyKibana.get_data_from_kibana()
-    MyKibana.transform_data2(args)
-    MyKibana.scan_and_parse_messages(args,MyReport, MyPars)
+    ContinueHere=True
+    while ContinueHere:
+        MyKibana.set_filter(args)
+        MyKibana.get_data_from_kibana()
+        MyKibana.transform_data2(args)
+        ContinueHere = MyKibana.scan_and_parse_messages(args,MyReport, MyPars)
     
     MyKibana.add_to_report(MyReport)
     MyReport.set_name("KIBANA_LOG_REPORT")
