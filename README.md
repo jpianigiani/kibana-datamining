@@ -11,7 +11,7 @@ Kibanaminer.py which uses TWO input files:
 - a json file (query_generic.json) that contains the json structure of a generic elasticsearch query
 - contains the Elasticsearch/Kibana specific objects that establish the connection to elasticsearch via ssh proxy
 
-## KIBANAMINER.PY : main() 
+### KIBANAMINER.PY : main() 
 main(), in Kibanaminer.py performs the following tasks:
 - Creates the request toward ElasticSearch in accordance to the parameter passed in the CLI  as arguments typically:
 - --------------------------- CLI PARAMETERS ------------------------------
@@ -27,6 +27,14 @@ main(), in Kibanaminer.py performs the following tasks:
 - Parses each field using REGEX and string extraction tecniques to extract relevant information, that is then visualized on the screen and stored to produce a file (for this , kibanaminer.py uses the report_library.py module)
 - Produces a human readable report (and saves it to disk, as well saves the elasticsearch data in a json file)
 
-# REPORT_LIBRARY.PY ----
+## REPORT_LIBRARY.PY ----
+This module is the improved version of mycapacitymodule.py (used in aop_tools/resource_analysis pipelines to produce VM report, NUMA report etc..). 
+This module contains the objects :
+- parameters: read the module specific json files (name of the application running main(), so in this case it is kibanaminer.json and kibanaminer-errors.json, which contains the Error codes the application casts) that contains the field keys, lengths, used to produce, visualize and print the reports as well the regexes to be used for message parsing. This object also contains the error handling functions (that are integrated with aop_logger)
+- report : parent report object containing all methods to manipulate records in a report, print reports and save them to disk
+- dynamic report: a child object of report that creates a report object by input of a JSON flat dictionary 
+- menu: contains only RGB color codes and escape sequences to change visualization of data/reports
+
+### REPORT_LIBRARY.PY : class report
 
 
