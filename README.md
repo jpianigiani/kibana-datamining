@@ -33,32 +33,29 @@ The human readable formatted report is saved under ./REPORT directory from where
 ---------------------------------------------------------------------------------
 ## Python dependencies
 The following libraries are used in **report_library.py:
-import json
-import string
-import sys
-import glob
-import os
-import math
-import re
-from datetime import datetime
-import traceback
-try: 
-    from aop_logger import aop_logger
+- import json
+- import string
+- import sys
+- import glob
+- import os
+- import math
+- import re
+- from datetime import datetime
+- import traceback
+- from aop_logger import aop_logger
     
 and in **kibanaminer.pt
-import json
-import requests
-import math
-import os, sys
-import argparse
-from datetime import datetime,timedelta
-import time
-import string
-import dateutil.parser as dparser
-from report_library import dynamic_report, parameters,report,menu
-import logging
-import re
-import getch
+- import json
+- import requests
+- import math
+- import os, sys
+- import argparse
+- from datetime import datetime,timedelta
+- import time
+- import string
+- from report_library import dynamic_report, parameters,report,menu
+- import re
+- import getch
 
 
 ---------------------------------------------------------------------------------
