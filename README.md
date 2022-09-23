@@ -1,7 +1,73 @@
 # kibana-datamining
 
+---------------------------------------------------------------------------------
 This tool is supposed to be run on the developer/maintainer local laptop, connected via VPN and using ssh-forwarding to issue API calls to the lab Elasticsearch cluster in NBG99x. Although it is called Kibana Datamining, it actually fetches data from ElasticSearch itself.
+---------------------------------------------------------------------------------
+## Required files
+In order for the tool to run on a local laptop to connect to NBG99x Elasticsearch, you need the following files:
+- **kibanaminer.py
+- **report_library.py
+- **query_generic.json
+- **kibanaminer.json
+- **kibanaminer-errors.json
+- **configdata.json
 
+The output files containing elasticsearch complete response and the flattened down version of the response are in the same folder, under kibanaminer.out and kibanaminer.short.out respectively)
+The human readable formatted report is saved under ./REPORT directory from where the kibanaminer.py runs. This is configurable under the kibanaminer.json file (key: "Files")
+
+---------------------------------------------------------------------------------
+## Python dependencies
+The following libraries are used in **report_library.py:
+import json
+import string
+import sys
+import glob
+import os
+import math
+import re
+from datetime import datetime
+import traceback
+try: 
+    from aop_logger import aop_logger
+    
+and in **kibanaminer.pt
+import json
+import requests
+import math
+import os, sys
+import argparse
+from datetime import datetime,timedelta
+import time
+import string
+import dateutil.parser as dparser
+from report_library import dynamic_report, parameters,report,menu
+import logging
+import re
+import getch
+
+
+---------------------------------------------------------------------------------
+# Using the tool
+**python3 kibanaminer.py -f 2022-09-16t12:26 
+- fetches all the records starting with the specified date:time (please note : small 't' between date and time, in this format
+- default value for -f is now()-24 hours
+
+**python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55
+- fetches all records between those dates. Default value for -t is now()
+
+**python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55 -w s43 hpe error
+- fetches all records between those dates which CONTAIN any of the three words ['s43', 'hpe', 'error'] in ANY of the fields
+
+**python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55 -x info warn
+- fetches all records between those dates which DO NOT CONTAIN any of the three words ['info', 'warn'] in ALL of the fields
+
+**python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55 -w s43 hpe error -x info warn
+- fetches all records between those dates which CONTAIN any of the three words ['s43', 'hpe', 'error'] in ANY of the fields and DO NOT CONTAIN any of the three words ['info', 'warn'] in ALL of the fields
+
+
+
+
+---------------------------------------------------------------------------------
 # Tool software structure:
 The tool is composed of two modules (kibanaminer.py and report_library.py).
 
