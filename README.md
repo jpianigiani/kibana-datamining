@@ -25,6 +25,9 @@ main(), in Kibanaminer.py performs the following tasks:
 - --------------------------------------------------------------------------
 - Receives the response from ElasticSearch, saves it and transforms into a flat JSON data structure {"record progressive number":{ subset of ElasticSearch fields in "key":"value"}
 - - 
-- Parses each field using REGEX to extract 
+- Parses each field using REGEX and string extraction tecniques to extract relevant information, that is then visualized on the screen and stored to produce a file (for this , kibanaminer.py uses the report_library.py module)
+- Produces a human readable report (and saves it to disk, as well saves the elasticsearch data in a json file)
+
+--- REPORT_LIBRARY.PY ----
 
 
