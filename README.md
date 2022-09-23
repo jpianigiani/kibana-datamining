@@ -35,6 +35,14 @@ This module contains the objects :
 - dynamic report: a child object of report that creates a report object by input of a JSON flat dictionary 
 - menu: contains only RGB color codes and escape sequences to change visualization of data/reports
 
+### kibanaminer.json : configuration data for the report_library.py module
+This json files contains all the configuration data for the report_library.py module.
+- Syslog configuration data under key "syslog"
+- Report Keys, sorting keys and multiline_keys under "Reports_Keys"
+- Length of each field is under FieldLenghts. Those fields which contain multiple values are also present under "FieldLists" (length of each entry)
+- FieldTransforms contains the customizable function to apply for each reportField before printing
+- FieldTransformsAttributes contains two keys (corresponding to two distinct report object methods: split_string and message_parser). These two keys contain the regex expressions to be applied. the split_String call is used to extract information (resulttype) from a string using regex. the message_parser is more specific for kibanaminer.py and it is used to parse all fields via all regexes to extract as much valuable info from a elasticsearch message
+
 ### REPORT_LIBRARY.PY : class report
 a Report is an object storing structured data. each report has a set of attributes:
 - a NAME (set_name), which is used for the filename where the report is saved (every printout on screen of a report corresponds to also saving the report as a file)
@@ -47,3 +55,7 @@ a Report is an object storing structured data. each report has a set of attribut
 - - 
 The report object contains 
 - Data structure to store (2D array) the data constituting a report
+- Methods to manipulate records (add, search), to get keys for that report
+  Methods for records processing e.g. deriving data from record entries via regex. For Kibanaminer.py, the most relevant is "def message_parser()" which does the actual regex parsing of elasticsearch records. In other apps as resource_analysis.py, regex parsing is used e.g. to derive the vnf name or vnfc name or the lineup from the vnf name
+  Methods to "transform" the data before visualizing it (def ApplyTransforms), which applies custom functionality on each key (as specified in the kibanaminer.json, under the key "FieldTransforms" . These are custom functions apply to each record entry value via eval() before passing the transformed record to the Linewrapper for printing/visualization
+  Methods for printing and saving the reports (def print_report) including indentation and text wrapping (see def LineWrapper_V2)
