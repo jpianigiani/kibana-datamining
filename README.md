@@ -2,7 +2,9 @@
 
 ---------------------------------------------------------------------------------
 - This tool is supposed to be run on the developer/maintainer local laptop, connected via VPN and using ssh-forwarding to issue API calls to the lab Elasticsearch cluster in NBG99x. Although it is called Kibana Datamining, it actually fetches data from ElasticSearch itself.
-The ssh-proxy configuration ,as well the elasticsearch URL, isin configdata.json:
+
+The ssh-proxy configuration ,as well the elasticsearch URL, is in configdata.json:
+
 {
         "endpoint":{
                 "url":"http://172.23.95.77:9200/fluentd.*/_search",
@@ -15,7 +17,8 @@ The ssh-proxy configuration ,as well the elasticsearch URL, isin configdata.json
                     "kbn-xsrf": "True"
                 }
             },
-in the example above, i am using port 5000 forwarding to nbg992
+
+in the example above, i am using port 5000 forwarding to nbg992 by "ssh -o ServerAliveInterval=59 -ND 5000 DT_Nbg992_Shell"
 
 ---------------------------------------------------------------------------------
 ## Required files
