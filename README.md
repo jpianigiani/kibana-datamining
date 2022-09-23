@@ -1,16 +1,16 @@
 # kibana-datamining
 
 ---------------------------------------------------------------------------------
-This tool is supposed to be run on the developer/maintainer local laptop, connected via VPN and using ssh-forwarding to issue API calls to the lab Elasticsearch cluster in NBG99x. Although it is called Kibana Datamining, it actually fetches data from ElasticSearch itself.
+- This tool is supposed to be run on the developer/maintainer local laptop, connected via VPN and using ssh-forwarding to issue API calls to the lab Elasticsearch cluster in NBG99x. Although it is called Kibana Datamining, it actually fetches data from ElasticSearch itself.
 ---------------------------------------------------------------------------------
 ## Required files
 In order for the tool to run on a local laptop to connect to NBG99x Elasticsearch, you need the following files:
-- **kibanaminer.py
-- **report_library.py
-- **query_generic.json
-- **kibanaminer.json
-- **kibanaminer-errors.json
-- **configdata.json
+- kibanaminer.py
+- report_library.py
+- query_generic.json
+- kibanaminer.json
+- kibanaminer-errors.json
+- configdata.json
 
 The output files containing elasticsearch complete response and the flattened down version of the response are in the same folder, under kibanaminer.out and kibanaminer.short.out respectively)
 The human readable formatted report is saved under ./REPORT directory from where the kibanaminer.py runs. This is configurable under the kibanaminer.json file (key: "Files")
@@ -48,24 +48,30 @@ import getch
 
 ---------------------------------------------------------------------------------
 # Using the tool
-**python3 kibanaminer.py -f 2022-09-16t12:26 
+python3 kibanaminer.py -i
+- fetches all the records and displays in INTERACTIVE MODE, starting with now()-24hours to now(). User can go over each record and browse the results on screen
+
+python3 kibanaminer.py -f 2022-09-16t12:26 
 - fetches all the records starting with the specified date:time (please note : small 't' between date and time, in this format
 - default value for -f is now()-24 hours
 
-**python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55
+python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55
 - fetches all records between those dates. Default value for -t is now()
 
-**python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55 -w s43 hpe error
+python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55 -w s43 hpe error
 - fetches all records between those dates which CONTAIN any of the three words ['s43', 'hpe', 'error'] in ANY of the fields
 
-**python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55 -x info warn
+python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55 -x info warn
 - fetches all records between those dates which DO NOT CONTAIN any of the three words ['info', 'warn'] in ALL of the fields
 
-**python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55 -w s43 hpe error -x info warn
+python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55 -w s43 hpe error -x info warn
 - fetches all records between those dates which CONTAIN any of the three words ['s43', 'hpe', 'error'] in ANY of the fields and DO NOT CONTAIN any of the three words ['info', 'warn'] in ALL of the fields
 
+python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55 -w s43 hpe error -x info warn -d
+- same as above, runs in DEBUG mode. 
 
-
+python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55 -w s43 hpe error -x info warn -r 2500
+- Same as above, requests elasticsearch to provide 2500 records if available. Default is 1000, i tried up to 10000 and it works
 
 ---------------------------------------------------------------------------------
 # Tool software structure:
