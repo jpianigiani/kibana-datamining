@@ -2,16 +2,16 @@
 
 This tool is supposed to be run on the developer/maintainer local laptop, connected via VPN and using ssh-forwarding to issue API calls to the lab Elasticsearch cluster in NBG99x. Although it is called Kibana Datamining, it actually fetches data from ElasticSearch itself.
 
-Tool software structure:
+<h1>Tool software structure:
 The tool is composed of two modules (kibanaminer.py and report_library.py).
 
----- KIBANAMINER.PY ----
+<h2> KIBANAMINER.PY 
 Kibanaminer.py which uses TWO input files:
 - its configuration data, in file configdata.json, containing ssh proxy parameters, list of fields to extract from elasticsearch
 - a json file (query_generic.json) that contains the json structure of a generic elasticsearch query
 - contains the Elasticsearch/Kibana specific objects that establish the connection to elasticsearch via ssh proxy
 
---- KIBANAMINER.PY : main() ---
+<h3> KIBANAMINER.PY : main() 
 main(), in Kibanaminer.py performs the following tasks:
 - Creates the request toward ElasticSearch in accordance to the parameter passed in the CLI  as arguments typically:
 - --------------------------- CLI PARAMETERS ------------------------------
@@ -24,10 +24,9 @@ main(), in Kibanaminer.py performs the following tasks:
 - - RECORDS (-r) : number of records to receive from ELasticSearch.Default is 1000, but consider that Fluentd produces something like 200K records per hour...
 - --------------------------------------------------------------------------
 - Receives the response from ElasticSearch, saves it and transforms into a flat JSON data structure {"record progressive number":{ subset of ElasticSearch fields in "key":"value"}
-- - 
 - Parses each field using REGEX and string extraction tecniques to extract relevant information, that is then visualized on the screen and stored to produce a file (for this , kibanaminer.py uses the report_library.py module)
 - Produces a human readable report (and saves it to disk, as well saves the elasticsearch data in a json file)
 
---- REPORT_LIBRARY.PY ----
+<h2> REPORT_LIBRARY.PY ----
 
 
