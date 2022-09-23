@@ -136,10 +136,10 @@ a Report is an object storing structured data. each report has a set of attribut
 - - report_type_SORTING_KEYS: contains  the keys by which the report data are sorted by <report object>sort_report()
   - report_type_MULTILINE_KEYS: contains a dict like {"0":[ "key2", "key1"],"1":["key3]} that is used to print a report record over multiple lines (0 is the first line, 1 is the second and so on..)
   
-- - 
+--------------------------------------------
 The report object contains 
 - Data structure to store (2D array) the data constituting a report
-- Methods to manipulate records (add, search), to get keys for that report
-  Methods for records processing e.g. deriving data from record entries via regex. For Kibanaminer.py, the most relevant is "def message_parser()" which does the actual regex parsing of elasticsearch records. In other apps as resource_analysis.py, regex parsing is used e.g. to derive the vnf name or vnfc name or the lineup from the vnf name
-  Methods to "transform" the data before visualizing it (def ApplyTransforms), which applies custom functionality on each key (as specified in the kibanaminer.json, under the key "FieldTransforms" . These are custom functions apply to each record entry value via eval() before passing the transformed record to the Linewrapper for printing/visualization
-  Methods for printing and saving the reports (def print_report) including indentation and text wrapping (see def LineWrapper_V2)
+- Methods to manipulate records (add, search), to get keys for that report 
+- Methods for records processing e.g. deriving data from record entries via regex. For Kibanaminer.py, the most relevant is "def message_parser()" which does the actual regex parsing of elasticsearch records. In other apps as resource_analysis.py, regex parsing is used e.g. to derive the vnf name or vnfc name or the lineup from the vnf name
+- Methods to "transform" the data before visualizing it (def ApplyTransforms), which applies custom functionality on each key (as specified in the kibanaminer.json, under the key "FieldTransforms" . These are custom functions apply to each record entry value via eval() before passing the transformed record to the Linewrapper for printing/visualization
+- Methods for printing and saving the reports (def print_report) including indentation and text wrapping (see def LineWrapper_V2)
