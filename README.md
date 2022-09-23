@@ -36,5 +36,14 @@ This module contains the objects :
 - menu: contains only RGB color codes and escape sequences to change visualization of data/reports
 
 ### REPORT_LIBRARY.PY : class report
-
-
+a Report is an object storing structured data. each report has a set of attributes:
+- a NAME (set_name), which is used for the filename where the report is saved (every printout on screen of a report corresponds to also saving the report as a file)
+- a TYPE (e.g. KIBANA_LOG_REPORT, MESSAGE_PARSE.. VM_REPORT): the type is used as the INITIAL STRING that identifies the different keys of that report e.g. if name=KIBANA_LOG_REPORT, in the kibanaminer.json file, the keys of these reports are under "KIBANAMINER_LOG_KEYS":{"key1":20....}
+- different set of keys identifying the fields (columns) of the report: 
+- - report_type_KEYS: contains the keys for this report
+- - report_type_SORTING_KEYS: contains  the keys by which the report data are sorted by <report object>sort_report()
+  - report_type_MULTILINE_KEYS: contains a dict like {"0":[ "key2", "key1"],"1":["key3]} that is used to print a report record over multiple lines (0 is the first line, 1 is the second and so on..)
+  
+- - 
+The report object contains 
+- Data structure to store (2D array) the data constituting a report
