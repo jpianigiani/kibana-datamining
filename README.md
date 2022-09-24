@@ -60,7 +60,7 @@ In order for the tool to run on a local laptop to connect to NBG99x Elasticsearc
 - kibanaminer-errors.json
 - configdata.json
 
-The output files containing elasticsearch complete response and the flattened down version of the response are in the same folder, under kibanaminer.out and kibanaminer.short.out respectively)
+The output files containing elasticsearch complete response and the flattened down version of the response are in the same folder, under kibanaminer.out and kibanaminer.short.out AND kibanaminer.medium.out (containing .short.out plus the data parsing results) respectively)
 The human readable formatted report is saved under ./REPORT directory from where the kibanaminer.py runs. This is configurable under the kibanaminer.json file (key: "Files")
 
 ---------------------------------------------------------------------------------
