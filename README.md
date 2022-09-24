@@ -6,6 +6,7 @@
 The ssh-proxy configuration ,as well the elasticsearch URL, is in configdata.json: the selection of the ENDPOINT name (via the -e parameter) (and the elasticsearch data view e.g fluentd.* = syslogs, alarms= nims-ca-em*) allows to select the ElasticSearch Data view  to visualize alarms, logs , or vendor specific logs.
 
 {
+        
         "syslog":{
                 "url":"http://172.23.95.77:9200/fluentd.*/_search",
                 "proxies": {
@@ -18,7 +19,7 @@ The ssh-proxy configuration ,as well the elasticsearch URL, is in configdata.jso
                 }
             },
 
-            "hpe_logs":{
+         "hpe_logs":{
                 "url":"http://172.23.95.77:9200/fluentd.nims-ca-logs-hpe*/_search",
                 "proxies": {
                     "https": "socks5h://127.0.0.1:5000",
@@ -32,7 +33,7 @@ The ssh-proxy configuration ,as well the elasticsearch URL, is in configdata.jso
                 "timestamp_field":"@timestamp"
 
             },
-            "alarms":{
+          "alarms":{
                 "url":"http://172.23.95.77:9200/nims-ca-em*/_search",
                 "proxies": {
                     "https": "socks5h://127.0.0.1:5000",
@@ -45,6 +46,7 @@ The ssh-proxy configuration ,as well the elasticsearch URL, is in configdata.jso
                 "fields":["@timestamp","_index","Host","ident","ci-id","severity","data_source","fluentd_tag","summary","additional_text",
                 "nims-alarm.alarmrawdata.state","nims-alarm.nimsmetainfo.identifier"],
                 "timestamp_field":"@timestamp"
+}
 
 in the example above, i am using port 5000 forwarding to nbg992 by "ssh -o ServerAliveInterval=59 -ND 5000 DT_Nbg992_Shell"
 
