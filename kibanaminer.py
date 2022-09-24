@@ -1,7 +1,6 @@
 # -----------------------------------------------------------
 # J.Pianigiani, August 17 2022
 # -----------------------------------------------------------
-from itertools import count
 import json
 import requests
 import math
@@ -15,7 +14,6 @@ from report_library import dynamic_report, parameters,report,menu
 import logging
 import re
 import getch
-import textwrap
 
 
 
@@ -73,14 +71,15 @@ class kibanaminer():
         self.QUERYFILENAME="query_generic.json"
         with open(self.CONFIGFILENAME,"r") as file2:
             configdata=json.load(file2)
-        self.FieldsList=configdata["fields"]
-        self.TwoLevelParseFields=configdata["two_level_parse"]
-        self.elastic_url = configdata["endpoint"]["url"]
+        #self.TwoLevelParseFields=configdata["two_level_parse"]
+        self.FieldsList=configdata[args.ENDPOINT]["fields"]
+
+        self.elastic_url = configdata[args.ENDPOINT]["url"]
         self.session = requests.Session()
         self.session.verify = False
-        self.session.proxies =configdata["endpoint"]["proxies"] 
+        self.session.proxies =configdata[args.ENDPOINT]["proxies"] 
         print(self.session.proxies)
-        self.HEADERS = configdata["endpoint"]["headers"]
+        self.HEADERS = configdata[args.ENDPOINT]["headers"]
         self.query={}
         self.DEBUG=args.DEBUG
         if self.DEBUG:
@@ -89,21 +88,93 @@ class kibanaminer():
         self.ScreenWitdh = int(self.screencolumns)
 
     def parse_date(self, val, returntype="kibana"):
-        dateregex="^((0?[13578]|10|12)(-|\/)(([1-9])|(0[1-9])|([12])([0-9]?)|(3[01]?))(-|\/)((19)([2-9])(\\d{1})|(20)([01])(\\d{1})|([8901])(\\d{1}))|(0?[2469]|11)(-|\/)(([1-9])|(0[1-9])|([12])([0-9]?)|(3[0]?))(-|\/)((19)([2-9])(\\d{1})|(20)([01])(\\d{1})|([8901])(\\d{1})))$"
-        timeregex="([0-9]{2}[:][0-9]{2}[:][0-9]{2})"
-        dateresult=re.findall(dateregex,val)
-        timeresult=re.findall(timeregex,val)
-        if dateresult:
-            print("dateresult:",dateresult)
-            print("timeresult:",timeresult)
+        dateregex=[]
+        timeregex=[]
+        dict_formats={"year":["%Y","%y","%-y"], "month":["%m","%-m","%b","%B"], "day":["%d","%-d"]
+
+        }
+        #stringa="((20[0-9]{2})[-\/\.](0?[1-9]|1[0-2]|[1-9])[-\/\.](0?[1-9]|[1-2][0-9]|3[0-1]|[0-9]))|((0[1-9]|[1-2][0-9]|3[0-1]|[0-9])[-\/\.](0[1-9]|1[0-2]|[0-9])[-\/\.](20[0-9]{2}))"
+        stringa="(?P<YMD>(?P<Y1>20[0-9]{2})[-\/\.](?P<M1>0?[1-9]|1[0-2])[-\/\.](?P<D1>0[1-9]|[1-2][0-9]|3[0-1]))|(?P<DMY>(?P<D2>0[1-9]|[1-2][0-9]|3[0-1]))[-\/\.](?P<M2>0?[1-9]|1[0-2])[-\/\.](?P<Y2>20[0-9]{2})|(?P<MYD>(?P<M3>0?[1-9]|1[0-2])[-\/\.](?P<D3>0[1-9]|[1-2][0-9]|3[0-1])[-\/\.](?P<Y3>20[0-9]{2}))"
+        dateregex.append(stringa)
+        timeregex.append("((?P<HH>[0-1]?[0-9]|2[0-3])[:\.](?P<MM>[0-5][0-9])[:\.]?(?P<SS>[0-5][0-9])?)")
+        #timeregex.append("(([0-1]?[0-9]|2[0-3])[:\.]([0-5][0-9]))")
+        for item in dateregex:
+            regex=re.compile(item)
+            result=re.search(regex,val)
+            if result:
+                #print("val:",val," item:",item," dateresult:",result.group(0))
+                #print("result:",result)
+                #print(result.groups())
+                newdatelist=[]
+                date_values=[]
+                if result.group("YMD"):
+                    format1="%Y-%m-%d"
+                elif result.group("DMY"):
+                    format1="%d-%m-%Y"
+                elif result.group("MYD"):
+                    format1="%m-%d-%Y"
+                else:
+                    print("DATE REGEX - Unable to parse date")
+                    print("passed string:",val, "date regex result:",result)
+                    exit(-1)
+                for item in result.groups():
+                    if item:
+                        newdatelist.append(item.rjust(2,'0'))
+                date_values=newdatelist[1:]
+                normalized_datevalue="-".join(date_values)
+                print("DATEREGEX: normalized_datevalues:",normalized_datevalue)
+                
+            else:
+                print("ERROR - no valid date provided :", val)
+                exit(-1)
+
+
+        for item in timeregex:
+            regex=re.compile(item)
+            result=re.search(regex,val)
+            if result:
+                #print("val:",val," item:",item2," timeresult:",result2.group(0))
+                timelist=[]
+                print("TIMEREGEX: result.groups:",result.groups())
+
+                if result:
+                    for item in result.groups():
+                        if item:
+                            timelist.append(item.rjust(2,'0'))
+                    newlist=timelist[1:]
+                    normalized_timevalue=":".join(newlist)
+                    #print("newlist:",newlist )
+                if result.group("SS"):
+                    format1+=" %H:%M:%S"
+                else:
+                    format1+=" %H:%M"
+            else:
+                print("no valid time provided :", val,".. using 00:00:00 as default")
+                normalized_timevalue="00:00:00"
+        
+        
+        actual_datetimevalue_string=normalized_datevalue+' '+normalized_timevalue
+        print("FINAL: actual datetimevalue_string:",actual_datetimevalue_string, "format1:",format1)
+        actual_datetimevalue=datetime.strptime(actual_datetimevalue_string,format1)
+        print("FINAL: actual_datetimevalue :",actual_datetimevalue)
+        #except ValueError as e:
+        #            print("Unable to parse date")
+        #            print("actual_datevalue:",actual_datetimevalue_string)
+        #            print("format1:",format1)
+        #            exit(-1)
+                
+        if returntype=="kibana":
+            return_string=datetime.strftime(actual_datetimevalue,"%Y-%m-%dT%H:%M:%S")
+            print(return_string)
+            return (return_string,actual_datetimevalue)
+        
 
 #------------------------------------------------------------------------------------------------------------------------------------
     def set_filter(self, args):
-
-        self.parse_date(args.FROM)
-        self.QueryFrom=args.FROM
+       
+        self.QueryFrom, self.QueryFromDatetime= self.parse_date(args.FROM)
         #self.QueryFrom_DateTime=datetime.strptime(self.QueryFrom,"%Y-%m-%d %H:%M:%S")
-        self.QueryTo=args.TO
+        self.QueryTo,self.QueryToDatetime= self.parse_date(args.TO)
         #self.QueryTo_DateTime=datetime.strptime(self.QueryTo,"%Y-%m-%d %H:%M:%S")
 
         self.localRegexDict={}
@@ -248,6 +319,126 @@ class kibanaminer():
         with open("kibanaminer.out","w") as file1:
             file1.write(json.dumps(self.queryresult,indent=10))
 #------------------------------------------------------------------------------------------------------------------------------------
+    def transform_data3(self,arguments ):
+
+        def get_recursively(search_dict, field):
+            if isinstance(search_dict, dict):
+                if field in search_dict:
+                    return search_dict[field]
+                for key in search_dict:
+                    item = get_recursively(search_dict[key], field)
+                    if item is not None:
+                        return item
+            elif isinstance(search_dict, list):
+                for element in search_dict:
+                    item = get_recursively(element, field)
+                    if item is not None:
+                        return item
+            return None
+
+        self.ExcludedCounter=0
+        self.transformed_data={}
+        self.count=0
+        if self.queryresult["hits"]["total"]["value"]==0:
+            print("--------------------------------------------")
+            print("transform_data3: NO DATA RETURNED FROM QUERY")
+            print("--------------------------------------------")            
+            exit(-1)
+        else:
+            self.RECCOUNT=self.queryresult["hits"]["total"]["value"]
+            print("--------------------------------------------")            
+            print("TOTAL RECORDS FROM KIBANA: ", self.RECCOUNT)
+            print("--------------------------------------------")            
+        
+        if self.DEBUG:
+            print("self.localRegexDict['WORDSFLAG']:",self.localRegexDict["WORDSFLAG"]," self.localRegexDict['EXCLUDEWORDSFLAG']:",self.localRegexDict["EXCLUDEWORDSFLAG"])
+            
+        for record in self.queryresult["hits"]["hits"]:
+            if self.DEBUG:
+                print(self.OKGREEN+"--------------------------------------------")            
+                print("Record # {:} of {:}".format( self.count,self.RECCOUNT))
+                print("--------------------------------------------"+self.Yellow)            
+            #self.transformed_data[self.count]={}
+            # if no "include word" is present, then all records are considered to be included. 
+            #Otherwise all record are not included and they are included only if regex matches
+            if self.localRegexDict["WORDSFLAG"]:
+                IncludeRecord=False
+            else:
+                IncludeRecord=True
+            ExcludeRecord=False
+
+            temp_results=[]
+            temp_result_keys=[]
+            temp_result_dict={}
+
+            for mykey in self.FieldsList:
+                temp_results=get_recursively(record,mykey)
+                #print("DEBUG transform_Data_3")
+                if self.DEBUG:
+                    print("key:",mykey, "   Temp_result:",temp_results)
+                try:
+                    value=temp_results.lower()
+                except:
+                    if self.DEBUG:
+                        print("DEBUG: Get recursively did not find result for key:",mykey)
+                        print("temp_Results=",temp_results)
+                        print(json.dumps(record,indent=5))
+                        exit(-1)
+                    value=""
+                if True:
+                    if self.localRegexDict["WORDSFLAG"]:
+                        WordsMatchResult=self.localRegexDict["WORDS"].findall(value)
+                        if WordsMatchResult:
+                            IncludeRecord=True
+                            if self.DEBUG:
+                                print(self.Yellow+"value:",value, 
+                                    self.Grey+" Regex:", self.localRegexDict["WORDSREGEX"],
+                                    self.OKBLUE+" WordsMAtchResult=",WordsMatchResult,self.Yellow)
+                        else:
+                            pass
+                            #print(self.Yellow+"value:",value, 
+                            #    self.Grey+" Regex:", 
+                            #    self.localRegexDict["WORDSREGEX"],
+                            #    self.Yellow+" no match")                        
+
+                    if self.localRegexDict["EXCLUDEWORDSFLAG"]:
+                        ExcludeWordsMatchResult=self.localRegexDict["EXCLUDEWORDS"].findall(value)
+                        if ExcludeWordsMatchResult:
+                            ExcludeRecord=True
+                            IncludeRecord=False
+                            if self.DEBUG:
+                                print(self.Yellow+"value:",value, 
+                                    self.Grey+" Regex:", self.localRegexDict["EXCLUDEWORDSREGEX"],
+                                    self.FAIL+" ExcludeWordsMatchResult=",ExcludeWordsMatchResult,self.Yellow)
+                    else:
+                        pass
+                        #print(self.Yellow+"value:",value, 
+                        #self.Grey+" Regex:", 
+                        #self.localRegexDict["EXCLUDEWORDSREGEX"],
+                        #self.Yellow+" no match")         
+                    temp_result_dict[mykey]=value
+                if self.DEBUG:
+                    print("DEBUG : temp_result:",temp_result_dict)
+
+            if (IncludeRecord and ExcludeRecord==False) :
+                self.transformed_data[self.count]=temp_result_dict
+                if self.DEBUG:
+                    print("Count:",self.count,"  added:")
+                if self.count==0:
+                    self.Tstart=self.transformed_data[self.count]["@timestamp"]
+                self.count+=1
+            else:
+                self.ExcludedCounter+=1
+                if self.DEBUG:
+                    print("\tExcluded records due to Preliminary Regex: {:}".format(self.ExcludedCounter))
+        if self.count==0:
+            print("----------------------------------------------------------------------------")
+            print("transform_data3: returned 0 records post additional filtering on query data")
+            print("----------------------------------------------------------------------------")
+            exit(-1)
+        self.Tend=self.transformed_data[self.count-1]["@timestamp"]
+        with open("kibanaminer.short.out","w") as file1:
+            file1.write(json.dumps(self.transformed_data,indent=10))
 
 #------------------------------------------------------------------------------------------------------------------------------------
 
@@ -289,7 +480,13 @@ class kibanaminer():
                     root=record
                 else:
                     root= record["_source"]
-                stringvalue = root[mykey]
+                try:
+                    stringvalue = root[mykey]
+                except:
+                    print("transform_data2: error fetching key={:} from Elastic records".format(mykey))
+                    print("JSON Dumps of record from Elastic is the following:")
+                    print(json.dumps(record,indent=10))
+                    exit(-1)
                 #print("----------------------------")
                 #print("stringvalue:")
                 #print(stringvalue)
@@ -371,10 +568,6 @@ class kibanaminer():
                 reportobject.UpdateLastRecordValueByKey(field,self.transformed_data[item][field])
 
     def interactive(self, args, DirectionValue):
-
-        #src= input("continue?")
-        #print(self.FAIL+"\t<CR>: Next\t-:Back\t<ESC> or q:Exit"+self.Yellow)
-        #charlist={'q':0,'Q':0,'-':-1,'\n':1,' ':1,'/':2,chr(27):0,'2':100,'1':10}
         if DirectionValue==1:
             DirectionChar='+'
         else:
@@ -410,13 +603,13 @@ class kibanaminer():
                 #print(ascii(ch))
                 CharSequence+=OneChar.lower()
             returnAction= InputCharacterMap[OneChar]["action"]
-
+            returnValue=InputCharacterMap[OneChar]["value"]
             if returnAction in ExitActions:
                 if returnAction=="change":
                     DirectionValue=-1*DirectionValue
                 var_Continue=False
                 returnFilter=None
-                returnValue=InputCharacterMap[OneChar]["value"]*DirectionValue
+                returnValue*=DirectionValue
 
             if returnAction =="search":
                 MyDict=InputCharacterMap[OneChar]
@@ -454,7 +647,7 @@ class kibanaminer():
                     var_Continue=True
                     returnFilter=None
 
-        print("Retvalue:",returnValue," filter:", returnFilter, " action:",returnAction, self.Backg_Default)
+        #print("Retvalue:",returnValue," filter:", returnFilter, " action:",returnAction, self.Backg_Default)
         
         return returnValue, returnFilter, returnAction, DirectionValue
             
@@ -480,6 +673,7 @@ class kibanaminer():
     def scan_and_parse_messages(self, args,reportobject, pars):
         mylist= list(self.transformed_data.keys())
         mylistlen=len(mylist)
+        self.enriched_data={}
         #print(mylist)
         key=0
         #for key in self.transformed_data.keys():
@@ -489,18 +683,18 @@ class kibanaminer():
         while GoOn:
             #print("key:",key, " len of keys:",mylistlen)
             #message=[ self.transformed_data[key]["_index"], self.transformed_data[key]["message"]]
-            try:
-                message=[]
-                messagekeys=[]
-                for field in self.TwoLevelParseFields :
-                    #print("DEBUG: Adding ", field, " to message ",message, " from ",self.transformed_data[key] )
-                    if field in self.transformed_data[key].keys():
-                        message.append (self.transformed_data[key][field])
-                        messagekeys.append(field)
-            except:
-                print("scan_and_parse_messages: message:",message)
-                print("scan_and_parse_messages: Field:",field)
-                exit(-1)
+            #try:
+            #    message=[]
+            #    messagekeys=[]
+            #    for field in self.TwoLevelParseFields :
+            #        #print("DEBUG: Adding ", field, " to message ",message, " from ",self.transformed_data[key] )
+            #        if field in self.transformed_data[key].keys():
+            #            message.append (self.transformed_data[key][field])
+            #            messagekeys.append(field)
+            #except:
+            #    print("scan_and_parse_messages: message:",message)
+            #    print("scan_and_parse_messages: Field:",field)
+            #    exit(-1)
             #print("MESSAGE:", message)
             print(self.Backg_Yellow)
             Stringa0="{0:_^"+str(pars.ScreenWitdh)+"}"
@@ -514,6 +708,14 @@ class kibanaminer():
             #try:
             #returndictionary = reportobject.message_parser(message)
             returndictionary, modifiedrecord, JSONParsedrecord = reportobject.message_parser(self.transformed_data[key])
+            self.enriched_data[key]=self.transformed_data[key]
+            if "returndictionary" not in self.enriched_data[key]:
+                self.enriched_data[key]["parsed_values"]=returndictionary
+                self.enriched_data[key]["data_with_highlights"]=modifiedrecord
+                self.enriched_data[key]["json_parsed_values"]=JSONParsedrecord
+                #print(json.dumps(self.enriched_data[key]))
+
+
             Stringa="{:}"         
             #print(Stringa.format(json.dumps(self.transformed_data[key],indent=5)))
             for k,v in modifiedrecord.items(): #self.transformed_data[key].items():  
@@ -538,12 +740,12 @@ class kibanaminer():
             if args.INTERACTIVE:
 
                 Delta, Filter, action,DirectionRetval=self.interactive(args, Direction)
-                print("Directionvalue=",DirectionRetval)
                 Direction=DirectionRetval
                 if action=="delta":
                     key+=Delta
                     key%= mylistlen
                 elif action=="exit":
+                    
                     return False
                 elif action=="search":
                     matchfound=False
@@ -586,6 +788,7 @@ def main(arguments):
     #type=bool, default=False, required=False)
     parser.add_argument("-d","--DEBUG", help="If specified, DEBUG mode set to true", action='store_true')
     parser.add_argument("-r","--RECORDS", help="N. of hits returned by query, default=1000", type=int, default=1000, required=False)
+    parser.add_argument("-e","--ENDPOINT", help="ElasticSearch Data view to query: logs (default) for logs, alarms for alarms. See configdata.json",  default="logs", required=False)
 
     args=parser.parse_args()
 
@@ -594,9 +797,10 @@ def main(arguments):
     while ContinueHere:
         MyKibana.set_filter(args)
         MyKibana.get_data_from_kibana()
-        MyKibana.transform_data2(args)
+        MyKibana.transform_data3(args)
         ContinueHere = MyKibana.scan_and_parse_messages(args,MyReport, MyPars)
-    
+    enriched_file= open("kibanaminer.medium.out","w")
+    enriched_file.write(json.dumps(MyKibana.enriched_data,indent=4))
     MyKibana.add_to_report(MyReport)
     MyReport.set_name("KIBANA_LOG_REPORT")
     MyReport.print_report(MyPars)

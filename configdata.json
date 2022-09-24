@@ -1,5 +1,5 @@
 {
-        "endpoint":{
+        "logs":{
                 "url":"http://172.23.95.77:9200/fluentd.*/_search",
                 "proxies": {
                     "https": "socks5h://127.0.0.1:5000",
@@ -8,10 +8,43 @@
                 "headers":{
                     "Content-Type": "application/json",
                     "kbn-xsrf": "True"
-                }
+                },
+                "fields":["@timestamp","_index","host","ident","severity","message"],
+                "timestamp_field":"@timestamp"
+
             },
-            "fields":["@timestamp","_index","host","ident","severity","message"],
-            "two_level_parse":["_index","host","ident","message"]
+
+            "hpe_logs":{
+                "url":"http://172.23.95.77:9200/fluentd.nims-ca-logs-hpe*/_search",
+                "proxies": {
+                    "https": "socks5h://127.0.0.1:5000",
+                    "http": "socks5h://127.0.0.1:5000"
+                },
+                "headers":{
+                    "Content-Type": "application/json",
+                    "kbn-xsrf": "True"
+                },
+                "fields":["@timestamp","_index","host","ident","severity","message"],
+                "timestamp_field":"@timestamp"
+
+            },
+            "alarms":{
+                "url":"http://172.23.95.77:9200/nims-ca-em*/_search",
+                "proxies": {
+                    "https": "socks5h://127.0.0.1:5000",
+                    "http": "socks5h://127.0.0.1:5000"
+                },
+                "headers":{
+                    "Content-Type": "application/json",
+                    "kbn-xsrf": "True"
+                },
+                "fields":["@timestamp","_index","Host","ident","ci-id","severity","data_source","fluentd_tag","summary","additional_text",
+                "nims-alarm.alarmrawdata.state","nims-alarm.nimsmetainfo.identifier"],
+                "timestamp_field":"@timestamp"
+            }
+            
+
+
 
 
 }

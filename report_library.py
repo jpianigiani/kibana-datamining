@@ -8,7 +8,6 @@ import glob
 import os
 import math
 import re
-import operator
 from datetime import datetime
 import traceback
 try: 
@@ -576,8 +575,15 @@ class report():
                 #print("DEBUG: var_RecordEntry:",var_RecordEntry," var_Entry:-->",var_Entry,"<--",type(var_RecordEntry)," len of:", var_RecordEntryLen)
                 
                 stringa1="{:"+str( var_FieldLen  )+"s} |"
-                myunwrappedline+=stringa1.format(var_Entry)  
-
+                try:
+                    myunwrappedline+=stringa1.format(var_Entry)  
+                except:
+                    print("var_Entry:",var_Entry)
+                    print("myunwrappedline:",myunwrappedline)
+                    print("stringa1:",stringa1)
+                    print("var_RecordEntry:",var_RecordEntry)
+                    print("ReportKeyItem:",ReportKeyItem)
+                    exit(1)
                 # This section produces a 2D array, where each line contains the part of each record in each line
                 RowsValue = math.ceil(var_RecordEntryLen/var_FieldLen)
                 #print("DEBUG: RowsValue:",RowsValue, " var_RecordEntryLen:", var_RecordEntryLen," var_FieldLen:",var_FieldLen)
@@ -892,56 +898,67 @@ class report():
             #    IsJSON=False
         return IsJSON,TestDict
 
+# ----------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------
     def message_parser(self,messagedict):
         #print("-------report_library.py:message_parser------------")
+        LOCALDEBUG=0
         resultdict={}
         messagedict_withhighlights={}
         JSONParsed_Dict={}
         for myKey in messagedict.keys():
+            if LOCALDEBUG:
+                print("-------------------")
+                print("DEBUG TIER 0 myKey:",myKey)
             PayloadToParse= messagedict[myKey].lower().strip()
-            ModifiedPayload=PayloadToParse            
+            ModifiedPayload=PayloadToParse  
+
             for MyRegexKey in self.myRegexDict["message_parser"].keys():
+                if LOCALDEBUG:
+                    print("DEBUG TIER 1: MyRegexKey:",MyRegexKey)
                 MyRegex=self.get_regex("message_parser",MyRegexKey)
-                ResultTemp=MyRegex.findall(PayloadToParse)
-                if ResultTemp:
+                GoOnSearching=True
+                
+                ResultTemp_search=MyRegex.search(PayloadToParse, re.DOTALL)
+                ResultIterator=[OneSearch for OneSearch in MyRegex.finditer(PayloadToParse)]
+                for ResultTemp_search in ResultIterator:
+                #if ResultTemp_search:
                     MyUncompiledRegex=self.get_uncompiled_regex("message_parser",MyRegexKey)
                     ModifiedPayload = re.sub(MyUncompiledRegex,
-                        #lambda x :  menu.BackgRedBlink+x.group(0).upper()+menu.Default+menu.Backg_Default,
-                        lambda x :  menu.Backg_Red_ForeG_White+x.group(0).upper()+menu.Backg_Default,
+                        lambda x :  menu.Backg_Red_ForeG_White+x.group(0)+menu.Backg_Default,
+                        #lambda x :  menu.Backg_Red_ForeG_White+x.group(0).upper()+menu.Backg_Default,
+
                         ModifiedPayload)
                     messagedict_withhighlights[myKey]=ModifiedPayload
-                    #print("message_parser_V2 \nUncompiledRegex(",MyRegexKey,"):",MyUncompiledRegex,"\nModified Payload:\n",ModifiedPayload)
-                    #print("Regex.findall:",ResultTemp,"\n")
+                    OutputKey="result"
+                    if OutputKey in ResultTemp_search.groupdict().keys():
+                        if LOCALDEBUG:
+                            print("DEBUG TIER 2.0> ResultTemp.groupdict():",json.dumps(ResultTemp_search.groupdict(),indent=4))
+                            print("DEBUG TIER 2.1> resultTemp:",ResultTemp_search,"<<<")
+                            print("DEBUG TIER 2.2> Result.groups():",ResultTemp_search.groups())
+                            print("DEBUG TIER 2.3> myKey:",myKey," MyRegexKey:",MyRegexKey)
+                            print("DEBUG TIER 2.4> resultTemp.group[result]:",ResultTemp_search.group("result"))
+
+                        
+                        Result=[ResultTemp_search.groupdict()[OutputKey]]
+                        if LOCALDEBUG:
+                            print("DEBUG TIER 3.0> Result:",Result)
+                    else:
+                        Result=[]
+                    if MyRegexKey not in resultdict.keys():
+                        resultdict[MyRegexKey]=[]
+                        
+                    for ValueFound in Result :
+                        if ValueFound :
+                            if len(ValueFound)>0 and ValueFound not in resultdict[MyRegexKey]:
+                                #print(x,"--",type(x))
+                                resultdict[MyRegexKey].append(ValueFound)
+
+
                 messagedict_withhighlights[myKey]=ModifiedPayload
                 IsJSON,TestDict= self.payload_json_parser(PayloadToParse)
                 if IsJSON:
                     JSONParsed_Dict[myKey]=TestDict
-                Result2=[]
-                for item in ResultTemp:
-                    if type(item)==tuple:
-                        for elem in item:
-                            Result2.append(elem)
-                    else:
-                        Result2.append(item)
-                Result =list(filter(None, Result2))
-                #print(Result)
-                #Result2=MyRegex.search(message)
-                if Result:
-                    if MyRegexKey not in resultdict.keys():
-                        resultdict[MyRegexKey]=[]
-                    for x in Result :
-                    #for x in Result.groups() :
-                        #print("X=",x)
-                        if x :
-                            if len(x)>0 and x not in resultdict[MyRegexKey]:
-                                #print(x,"--",type(x))
-                                resultdict[MyRegexKey].append(x)
-                                
-                    #print("\tResultdict:",resultdict[MyRegexKey])
-                #print("\tRegexKey:{:20s} \tResult:{:} \tResult2:{:} ".format(MyRegexKey, Result, Result2))
-                #except:
-                #    print("\tmessage_parser : error on re.search for key={:}".format(MyRegexKey))
-        #print(json.dumps(resultdict,indent=10))
         
         return resultdict,messagedict_withhighlights,JSONParsed_Dict
 
@@ -956,6 +973,7 @@ class dynamic_report(report):
 
     def __init__(self,customreportType,inputdictionary, pars):
         super().__init__(pars)
+        #print("Self.Screenwidth:",self.ScreenWidth)
         self.ReportType=customreportType
         self.set_name(customreportType)
         self.Parameters_Configdata_Backup=self.Parameters_Configdata.copy()
@@ -1007,7 +1025,8 @@ class dynamic_report(report):
             #print(json.dumps(self.Parameters_Configdata, indent=10))
 
             var_Dict[self.ReportType+self.KEYS_KEYNAME]=MyCustomReportKeys
-            var_Dict[self.ReportType+self.SORTINGKEYS_KEYNAME]=[MyCustomReportKeys[0]]
+            if len (MyCustomReportKeys)>0:
+                var_Dict[self.ReportType+self.SORTINGKEYS_KEYNAME]=[MyCustomReportKeys[0]]
             var_Dict[self.ReportType+self.MULTILINEKEYS_KEYNAME]={}
             MultiLineIndex=0
             LenPerLine=0
@@ -1031,7 +1050,7 @@ class dynamic_report(report):
                 var_Dict[self.ReportType+self.MULTILINEKEYS_KEYNAME][str(MultiLineIndex)]=PerLineKeysList
             #print(json.dumps(var_Dict[self.ReportType+self.MULTILINEKEYS_KEYNAME],indent=10))   
             #var_Dict[self.ReportType+self.MULTILINEKEYS_KEYNAME]={"0":MyCustomReportKeys}
-            
+            #print(json.dumps(self.Parameters_Configdata["FieldLenghts"],indent=4))
             for NewKey in MyCustomReportKeys:
                 if NewKey not in self.Parameters_Configdata["FieldLenghts"].keys():
                     self.Parameters_Configdata["FieldLenghts"][NewKey]=MyCustomReportFieldLengths[NewKey]

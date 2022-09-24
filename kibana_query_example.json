@@ -1,0 +1,107 @@
+{
+    "track_total_hits": false,
+    "sort": [
+      {
+        "@timestamp": {
+          "order": "asc",
+          "unmapped_type": "boolean"
+        }
+      }
+    ],
+    "fields": [
+      {
+        "field": "*",
+        "include_unmapped": "true"
+      },
+      {
+        "field": "@timestamp",
+        "format": "strict_date_optional_time"
+      },
+      {
+        "field": "alert_data.alerts.endsAt",
+        "format": "strict_date_optional_time"
+      },
+      {
+        "field": "alert_data.alerts.startsAt",
+        "format": "strict_date_optional_time"
+      },
+      {
+        "field": "ts",
+        "format": "strict_date_optional_time"
+      }
+    ],
+    "size": 500,
+    "version": true,
+    "script_fields": {},
+    "stored_fields": [
+      "*"
+    ],
+    "runtime_mappings": {},
+    "_source": false,
+    "query": {
+      "bool": {
+        "must": [],
+        "filter": [
+          {
+            "bool": {
+              "filter": [
+                {
+                  "multi_match": {
+                    "type": "phrase",
+                    "query": "75f6467d-a948-4d6f-8653-c6ba5d8f27c8",
+                    "lenient": true
+                  }
+                },
+                {
+                  "multi_match": {
+                    "type": "phrase",
+                    "query": "Exception",
+                    "lenient": true
+                  }
+                },
+                {
+                  "bool": {
+                    "must_not": {
+                      "multi_match": {
+                        "type": "phrase",
+                        "query": "appformix",
+                        "lenient": true
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "range": {
+              "@timestamp": {
+                "format": "strict_date_optional_time",
+                "gte": "2022-09-15T22:00:00.000Z",
+                "lte": "2022-09-16T10:00:00.000Z"
+              }
+            }
+          },
+          {
+            "match_phrase": {
+              "_index": "fluentd.nims-ca-log-contrailinsights-2022.09.16"
+            }
+          }
+        ],
+        "should": [],
+        "must_not": []
+      }
+    },
+    "highlight": {
+      "pre_tags": [
+        "@kibana-highlighted-field@"
+      ],
+      "post_tags": [
+        "@/kibana-highlighted-field@"
+      ],
+      "fields": {
+        "*": {}
+      },
+      "fragment_size": 2147483647
+    }
+  }
