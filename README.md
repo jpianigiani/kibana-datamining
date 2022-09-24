@@ -99,6 +99,7 @@ python3 kibanaminer.py -i
 python3 kibanaminer.py -f 2022-09-16t12:26 
 - fetches all the records starting with the specified date:time (please note : small 't' between date and time, in this format
 - default value for -f is now()-24 hours
+** NOTE: now the date is parsed in different formats: YMD, DMY, MDY, and parsed into datetime. There is no need to add the 'T' between Date and time, as required in Elasticsearch query as from the CLI arguments (date and time can be provided as 2022/09/13,14:52 or 14/12/2021 07:21) the dates are matched agains three regex (YMD, DMY and MDY formats) and then converted to datetime values, before being passed to ElasticSearch into the query as strings
 
 python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55
 - fetches all records between those dates. Default value for -t is now()
