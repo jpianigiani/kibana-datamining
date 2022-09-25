@@ -87,81 +87,66 @@ class kibanaminer():
         self.screenrows, self.screencolumns = os.popen('stty size', 'r').read().split()
         self.ScreenWitdh = int(self.screencolumns)
 
-    def parse_date(self, val, returntype="kibana"):
+    def parse_date(self, passed_values_list, returntype="kibana"):
         dateregex=[]
         timeregex=[]
-        dict_formats={"year":["%Y","%y","%-y"], "month":["%m","%-m","%b","%B"], "day":["%d","%-d"]
-
-        }
-        #stringa="((20[0-9]{2})[-\/\.](0?[1-9]|1[0-2]|[1-9])[-\/\.](0?[1-9]|[1-2][0-9]|3[0-1]|[0-9]))|((0[1-9]|[1-2][0-9]|3[0-1]|[0-9])[-\/\.](0[1-9]|1[0-2]|[0-9])[-\/\.](20[0-9]{2}))"
-        stringa="(?P<YMD>(?P<Y1>20[0-9]{2})[-\/\.](?P<M1>0?[1-9]|1[0-2])[-\/\.](?P<D1>0[1-9]|[1-2][0-9]|3[0-1]))|(?P<DMY>(?P<D2>0[1-9]|[1-2][0-9]|3[0-1]))[-\/\.](?P<M2>0?[1-9]|1[0-2])[-\/\.](?P<Y2>20[0-9]{2})|(?P<MYD>(?P<M3>0?[1-9]|1[0-2])[-\/\.](?P<D3>0[1-9]|[1-2][0-9]|3[0-1])[-\/\.](?P<Y3>20[0-9]{2}))"
+        year_now=datetime.strftime(datetime.now(),"%Y")
+        stringa="(?P<YMD>(?P<YEAR>(?P<Y>20[0-9]{2})[-\/\.])(?P<M>[0][1-9]|1[0-2]|[1-9])[-\/\.](?P<D>[0][1-9]|[1-2][0-9]|3[0-1]|[1-9]))"
         dateregex.append(stringa)
-        timeregex.append("((?P<HH>[0-1]?[0-9]|2[0-3])[:\.](?P<MM>[0-5][0-9])[:\.]?(?P<SS>[0-5][0-9])?)")
+        stringa="(?P<DMY>(?P<D>[0][1-9]|[1-2][0-9]|3[0-1]|[1-9])[-\/\.](?P<M>[0][1-9]|1[0-2]|[1-9])(?P<YEAR>[-\/\.](?P<Y>20[0-9]{2})))"
+        dateregex.append(stringa)
+        stringa="(?P<MDY>(?P<M>[0][1-9]|1[0-2]|[1-9])[-\/\.](?P<D>[0][1-9]|[1-2][0-9]|3[0-1]|[1-9])(?P<YEAR>[-\/\.](?P<Y>20[0-9]{2})))"
+        dateregex.append(stringa)
+        stringa="(?P<DDMON>(?P<D>[0][1-9]|[1-2][0-9]|3[0-1]|[1-9])[-\/\.](?P<M>jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)(?P<YEAR>[-\/\.](?P<Y>20[0-9]{2}))?)"
+        dateregex.append(stringa)
+        stringa="(?P<DDMON>(?P<M>jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[-\/\.](?P<D>[0][1-9]|[1-2][0-9]|3[0-1]|[1-9])(?P<YEAR>[-\/\.](?P<Y>20[0-9]{2}))?)"
+        dateregex.append(stringa)
+        timeregex.append("(?P<HMS>(?P<HH>[0-1]?[0-9]|2[0-3])[:\.](?P<MM>[0-5][0-9])[:\.]?(?P<SS>[0-5][0-9])?)")
         #timeregex.append("(([0-1]?[0-9]|2[0-3])[:\.]([0-5][0-9]))")
+
+        string_to_parse=" ".join(passed_values_list).lower()
+
+        datematch=False
         for item in dateregex:
             regex=re.compile(item)
-            result=re.search(regex,val)
-            if result:
-                #print("val:",val," item:",item," dateresult:",result.group(0))
-                #print("result:",result)
-                #print(result.groups())
-                newdatelist=[]
-                date_values=[]
-                if result.group("YMD"):
-                    format1="%Y-%m-%d"
-                elif result.group("DMY"):
-                    format1="%d-%m-%Y"
-                elif result.group("MYD"):
-                    format1="%m-%d-%Y"
+            result_iterator=[OneSearch for OneSearch in regex.finditer(string_to_parse)]
+            for SearchResult in result_iterator:
+                Result_Dict = SearchResult.groupdict()
+                if not Result_Dict['Y']:
+                    Result_Dict['Y']=year_now
+                normalized_datevalue=Result_Dict["Y"]+'-'+Result_Dict["M"].rjust(2,'0')+'-'+Result_Dict["D"].rjust(2,'0')
+                if "DDMON" in Result_Dict.keys():
+                    format1="%Y-%b-%d"
                 else:
-                    print("DATE REGEX - Unable to parse date")
-                    print("passed string:",val, "date regex result:",result)
-                    exit(-1)
-                for item in result.groups():
-                    if item:
-                        newdatelist.append(item.rjust(2,'0'))
-                date_values=newdatelist[1:]
-                normalized_datevalue="-".join(date_values)
-                print("DATEREGEX: normalized_datevalues:",normalized_datevalue)
-                
-            else:
-                print("ERROR - no valid date provided :", val)
+                    format1="%Y-%m-%d"
+                datematch=True
+                print("\nitem:",item,"\nDATE REGEX: normalized_datevalues:",normalized_datevalue)                    
+            if datematch:
+                break  
+        if not datematch:
+                print("ERROR - no valid date provided :", string_to_parse, ": did not find match on ", item)
                 exit(-1)
 
-
+        timematch=False
         for item in timeregex:
             regex=re.compile(item)
-            result=re.search(regex,val)
-            if result:
-                #print("val:",val," item:",item2," timeresult:",result2.group(0))
-                timelist=[]
-                print("TIMEREGEX: result.groups:",result.groups())
-
-                if result:
-                    for item in result.groups():
-                        if item:
-                            timelist.append(item.rjust(2,'0'))
-                    newlist=timelist[1:]
-                    normalized_timevalue=":".join(newlist)
-                    #print("newlist:",newlist )
-                if result.group("SS"):
-                    format1+=" %H:%M:%S"
+            result_iterator=[OneSearch for OneSearch in regex.finditer(string_to_parse)]
+            for SearchResult in result_iterator:
+                Result_Dict = SearchResult.groupdict()
+                if "HMS" in Result_Dict.keys():
+                    format1+=" %H:%M:%S"                
+                    datematch=True
+                    if not Result_Dict['SS']:
+                        Result_Dict['SS']="00"
+                    normalized_timevalue=Result_Dict["HH"]+':'+Result_Dict["MM"].rjust(2,'0')+':'+Result_Dict["SS"].rjust(2,'0')
                 else:
-                    format1+=" %H:%M"
-            else:
-                print("no valid time provided :", val,".. using 00:00:00 as default")
-                normalized_timevalue="00:00:00"
-        
+                    print("no valid time provided :", string_to_parse,".. using 00:00:00 as default")
+                    normalized_timevalue="00:00:00"
+
         
         actual_datetimevalue_string=normalized_datevalue+' '+normalized_timevalue
-        print("FINAL: actual datetimevalue_string:",actual_datetimevalue_string, "format1:",format1)
         actual_datetimevalue=datetime.strptime(actual_datetimevalue_string,format1)
         print("FINAL: actual_datetimevalue :",actual_datetimevalue)
-        #except ValueError as e:
-        #            print("Unable to parse date")
-        #            print("actual_datevalue:",actual_datetimevalue_string)
-        #            print("format1:",format1)
-        #            exit(-1)
                 
         if returntype=="kibana":
             return_string=datetime.strftime(actual_datetimevalue,"%Y-%m-%dT%H:%M:%S")
@@ -772,6 +757,7 @@ class kibanaminer():
 #------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------------------
 def main(arguments):
+    os.system('cls')
     programname= arguments[0].split(".")[0]
     MyPars=parameters(programname)
     MyReport=report(MyPars)
@@ -780,8 +766,8 @@ def main(arguments):
     DefaultFromTime=CurrentTime-timedelta(hours=24)
     DefaultTo= CurrentTime.strftime("%Y-%m-%dT%H:%M:%S.000Z")
     DefaultFrom= DefaultFromTime.strftime("%Y-%m-%dT%H:%M:%S.000Z")
-    parser.add_argument("-f","--FROM",help="Specify from when to start fetching logs (%Y-%m-%dT%H:%M:%S.000Z). If omitted=Now-1day", default=DefaultFrom, required=False)
-    parser.add_argument("-t","--TO",help="Specify to when to fetch logs( %Y-%m-%dT%H:%M:%S.000Z). If omitted=Now", default=DefaultTo, required=False)
+    parser.add_argument("-f","--FROM",nargs='+',help="Specify from when to start fetching logs (%Y-%m-%dT%H:%M:%S). If omitted=Now-1day", default=DefaultFrom, required=False)
+    parser.add_argument("-t","--TO",nargs='+',help="Specify to when to fetch logs( %Y-%m-%dT%H:%M:%S.000Z). If omitted=Now", default=DefaultTo, required=False)
     parser.add_argument("-w","--WORDS", nargs='+', help="List of space-separated words to search in logs", required=False, type=str)
     parser.add_argument("-x","--EXCLUDEWORDS", nargs='+', help="List of space-separated words to EXCLUDE in logs", required=False, default=[], type=str)
     parser.add_argument("-i","--INTERACTIVE", help="If specified, interactive menu is presented after each record to navigate", action='store_true')
@@ -791,7 +777,6 @@ def main(arguments):
     parser.add_argument("-e","--ENDPOINT", help="ElasticSearch Data view to query: logs (default) for logs, alarms for alarms. See configdata.json",  default="logs", required=False)
 
     args=parser.parse_args()
-
     MyKibana=kibanaminer(args)
     ContinueHere=True
     while ContinueHere:
