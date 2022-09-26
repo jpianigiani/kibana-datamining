@@ -86,6 +86,7 @@ class kibanaminer():
             print("DEBUG Mode")
         self.screenrows, self.screencolumns = os.popen('stty size', 'r').read().split()
         self.ScreenWitdh = int(self.screencolumns)
+        self.SearchFilter={}
 
     def parse_date(self, passed_values_list, returntype="kibana"):
         dateregex=[]
@@ -569,19 +570,24 @@ class kibanaminer():
         if DirectionValue==1:
             DirectionChar='+'
         else:
-            DirectionChar='-'       
-
+            DirectionChar='-' 
+        TextToDisplay=""
+        for k ,v in self.SearchFilter.items():
+            TextToDisplay+=k+'='+v
         InputCharacterMap={
             "q":{"name":"Q","title":"Exit","value":0,"action":"exit"},
             chr(27):{"name":"ESC","title":"Exit","value":0,"action":"exit"},
             "-":{"name":"-","title":"Previous","value":-1,"action":"delta"},
-            '\n':{"name":"CR","title":DirectionChar+"1 record","value":1,"action":"delta"},
-            "1":{"name":"1","title":DirectionChar+"10 record","value":10,"action":"delta"},
+            '\n':{"name":"CR","title":DirectionChar+"1 rec","value":1,"action":"delta"},
+            "1":{"name":"1","title":DirectionChar+"10 rec","value":10,"action":"delta"},
             "2":{"name":"2","title":DirectionChar+"30 record","value":30,"action":"delta"},
             "3":{"name":"3","title":DirectionChar+"100 record","value":100,"action":"delta"},
             "/":{"name":"/","title":"search","value":0,"action":"search", "exit":['\n','/','x1b']},
+            "r":{"name":"r","title":"search'"+TextToDisplay+"'","value":0,"action":"repeatsearch", "exit":['\n','/','x1b']},
+
             " ":{"name":"<Space>","title":"Direction"+DirectionChar,"value":0,"action":"change"}
         }
+        returnFilter=None
 
         ExitActions=["delta","exit", "change"]
         OneChar=''
@@ -590,7 +596,7 @@ class kibanaminer():
         MenuString=self.Backg_Red_ForeG_White
         for Item in InputCharacterMap.keys():
             MyDict=InputCharacterMap[Item]
-            MenuItem=" [{:1s}] {:12s}   ".format(InputCharacterMap[Item]["name"],InputCharacterMap[Item]["title"])
+            MenuItem=" [{:1s}] {:}   ".format(InputCharacterMap[Item]["name"],InputCharacterMap[Item]["title"])
             MenuString+=MenuItem
         MenuString+=self.Backg_Default
         print(MenuString)
@@ -609,7 +615,14 @@ class kibanaminer():
                 returnFilter=None
                 returnValue*=DirectionValue
 
-            if returnAction =="search":
+            elif returnAction == "repeatsearch":
+                returnFilter={}
+                for k in self.SearchFilter.keys():
+                    returnFilter[k]=self.SearchFilter[k]
+                    var_Continue=False
+                    
+            elif returnAction =="search":
+                self.SearchString={}
                 MyDict=InputCharacterMap[OneChar]
                 CharSequence=''
                 OneChar=''
@@ -640,6 +653,7 @@ class kibanaminer():
                             CharSequence+=OneChar.lower()
                     var_Continue=False
                     returnFilter[FieldName]=CharSequence
+                    self.SearchFilter[FieldName]=CharSequence
                     #print("Return Filter:",returnFilter, self.Backg_Default)
                 else:
                     var_Continue=True
