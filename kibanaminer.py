@@ -104,8 +104,14 @@ class kibanaminer():
         timeregex.append("(?P<HMS>(?P<HH>[0-1]?[0-9]|2[0-3])[:\.](?P<MM>[0-5][0-9])[:\.]?(?P<SS>[0-5][0-9])?)")
         #timeregex.append("(([0-1]?[0-9]|2[0-3])[:\.]([0-5][0-9]))")
 
-        string_to_parse=" ".join(passed_values_list).lower()
-
+        if type(passed_values_list)==list:
+            string_to_parse=" ".join(passed_values_list).lower()
+        elif type(passed_values_list)==str:
+            string_to_parse=passed_values_list
+        else:
+            print("wrong type of passed value to parse date: ",passed_values_list)
+            print(type(passed_values_list))
+            exit(-1)
         datematch=False
         for item in dateregex:
             regex=re.compile(item)
@@ -158,9 +164,7 @@ class kibanaminer():
     def set_filter(self, args):
        
         self.QueryFrom, self.QueryFromDatetime= self.parse_date(args.FROM)
-        #self.QueryFrom_DateTime=datetime.strptime(self.QueryFrom,"%Y-%m-%d %H:%M:%S")
         self.QueryTo,self.QueryToDatetime= self.parse_date(args.TO)
-        #self.QueryTo_DateTime=datetime.strptime(self.QueryTo,"%Y-%m-%d %H:%M:%S")
 
         self.localRegexDict={}
         if args.WORDS:
@@ -298,7 +302,15 @@ class kibanaminer():
 #------------------------------------------------------------------------------------------------------------------------------------
 
     def get_data_from_kibana(self):
-        self.request = self.session.get(self.elastic_url, headers=self.HEADERS, json=self.query)
+        Timeout=22
+        try:
+            self.request = self.session.get(self.elastic_url, headers=self.HEADERS, json=self.query,timeout=Timeout)
+        except requests.exceptions.Timeout as e:
+            print("-"*100)
+            print("Connection to Elasticsearchcluster timed out after {:} seconds".format(Timeout))
+            print("Please check connectivity to ssh proxy , in case used")
+            print("-"*100)
+            exit(-1)
         print("response code {}".format(self.request.status_code))
         self.queryresult=self.request.json()
         with open("kibanaminer.out","w") as file1:
@@ -410,7 +422,8 @@ class kibanaminer():
                 if self.DEBUG:
                     print("Count:",self.count,"  added:")
                 if self.count==0:
-                    self.Tstart=self.transformed_data[self.count]["@timestamp"]
+                    stringa=self.transformed_data[self.count]["@timestamp"][:-16]
+                    self.Tstart=datetime.strptime(stringa,"%Y-%m-%dT%H:%M:%S")
                 self.count+=1
             else:
                 self.ExcludedCounter+=1
@@ -421,7 +434,7 @@ class kibanaminer():
             print("transform_data3: returned 0 records post additional filtering on query data")
             print("----------------------------------------------------------------------------")
             exit(-1)
-        self.Tend=self.transformed_data[self.count-1]["@timestamp"]
+        self.Tend=datetime.strptime(self.transformed_data[self.count-1]["@timestamp"][:-16],"%Y-%m-%dT%H:%M:%S")
         with open("kibanaminer.short.out","w") as file1:
             file1.write(json.dumps(self.transformed_data,indent=10))
 
@@ -521,7 +534,7 @@ class kibanaminer():
                 if self.DEBUG:
                     print("Count:",self.count,"  added:")
                 if self.count==0:
-                    self.Tstart=self.transformed_data[self.count]["@timestamp"]
+                    self.Tstart=self.transformed_data[self.count]["@timestamp"][:19]
                 self.count+=1
             else:
                 self.ExcludedCounter+=1
@@ -682,8 +695,9 @@ class kibanaminer():
             #    exit(-1)
             #print("MESSAGE:", message)
             print(self.Backg_Yellow)
+            
             Stringa0="{0:_^"+str(pars.ScreenWitdh)+"}"
-            Stringa1=" RECORD: {:3d} OF {:3d}  (from {:s} to {:s})".format(key,mylistlen,self.Tstart,self.Tend)
+            Stringa1=" RECORD: {:3d} OF {:3d}  (from {:15s} to {:15s})".format(key,mylistlen-1, datetime.strftime(self.Tstart,"%b %d, %H:%M:%S"),datetime.strftime(self.Tend,"%b %d, %H:%M:%S"))
             Stringa=Stringa0.format(Stringa1)
             Stringa+=self.Backg_Default
             print(Stringa)
@@ -692,7 +706,7 @@ class kibanaminer():
             #print("Message:\n",message)
             #try:
             #returndictionary = reportobject.message_parser(message)
-            returndictionary, modifiedrecord, JSONParsedrecord = reportobject.message_parser(self.transformed_data[key])
+            returndictionary, modifiedrecord, JSONParsedrecord ,color_legend= reportobject.message_parser(self.transformed_data[key])
             self.enriched_data[key]=self.transformed_data[key]
             if "returndictionary" not in self.enriched_data[key]:
                 self.enriched_data[key]["parsed_values"]=returndictionary
@@ -757,7 +771,7 @@ class kibanaminer():
 #------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------------------
 def main(arguments):
-    os.system('cls')
+    os.system('clear')
     programname= arguments[0].split(".")[0]
     MyPars=parameters(programname)
     MyReport=report(MyPars)

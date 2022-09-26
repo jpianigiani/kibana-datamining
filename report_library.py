@@ -247,7 +247,7 @@ class report():
 
     Report = []
     ReportTotalUsage = []
-
+    #Select RGB foreground color
 
     def __init__(self,params):
         #super().__init__()
@@ -274,63 +274,73 @@ class report():
         self.REPORTFIELDGROUP =self.Parameters_Configdata["Reports_Keys"]
         self.FIELDTRANSFORMSATTRIBUTES=self.Parameters_Configdata["FieldTransformsAttributes"]
         self.myRegexDict= {}
-        self.compile_regex_groups("split_string")
-        self.compile_regex_groups("message_parser")
+        self.compile_regexes()
+        self.create_colorslist()
 
-    def get_uncompiled_regex(self,group, key, subgroup=None):
-        if group in self.FIELDTRANSFORMSATTRIBUTES.keys():
-            if subgroup is None:
-                return self.FIELDTRANSFORMSATTRIBUTES[group][key]
-            else:
-                if subgroup in self.FIELDTRANSFORMSATTRIBUTES[group].keys():
-                    return self.FIELDTRANSFORMSATTRIBUTESFIELDTRANSFORMSATTRIBUTES[group][subgroup][key]
-                else:
-                    print("get_uncompiled_regex :subgroup {:} not found in myRegexDict".format(subgroup))
+
+    def create_colorslist(self):
+        def colorcompile(stringa, mytuple):
+            return stringa.format(mytuple[0],mytuple[1])
+
+        self.FOREANDBACKGROUND='\033[38;5;{:d};48;5;{:d}m'
+        self.FOREGROUND='\033[38;2;{:d};{:d};{:d}m'
+        self.BACKGROUND='\033[48;2;{:d};{:d};{:d}m'     #Select RGB background color
+        self.RESET='\033[0m'
+
+        self.Colorset={}
+        self.Colorset["NormalList"]=[]
+        self.Colorset["ReverseList"]=[]
+
+        
+        #https://i.stack.imgur.com/KTSQa.png
+        self.Colorset["ReverseList"]=[]
+        for BACKG in range(164,195,2):
+            self.Colorset["ReverseList"].append(colorcompile(self.FOREANDBACKGROUND,(0,BACKG)))
+            #+self.BACKGROUND.format(self.Colorset["BASE"]["BLACK"][0],self.Colorset["BASE"]["BLACK"][1],self.Colorset["BASE"]["BLACK"][2]))
+        self.Colorset["NormalList"]=[]
+        for FOREG in range(164,195,2):
+            self.Colorset["NormalList"].append(colorcompile(self.FOREANDBACKGROUND,(FOREG,0)))
+
+
+    def compile_regexes(self):
+        self.myRegexDict={}
+        for GroupName in self.FIELDTRANSFORMSATTRIBUTES.keys():
+            self.myRegexDict[GroupName]={}
+            for RegexListName in self.FIELDTRANSFORMSATTRIBUTES[GroupName].keys():
+                for RegexItem in self.FIELDTRANSFORMSATTRIBUTES[GroupName][RegexListName]:
+                    #print("Compiling Group:",GroupName,", regexlist ",RegexListName," RegexItem:",RegexItem)
+                    CompiledRegex=re.compile(RegexItem)
+                    self.myRegexDict[GroupName][RegexListName]=[]
+                    self.myRegexDict[GroupName][RegexListName].append(CompiledRegex)
+        
+    def get_recursively(self,search_dict, field):
+        if isinstance(search_dict, dict):
+            if field in search_dict:
+                return search_dict[field]
+            for key in search_dict:
+                item = self.get_recursively(search_dict[key], field)
+                if item is not None:
+                    return item
+        elif isinstance(search_dict, list):
+            for element in search_dict:
+                item = self.get_recursively(element, field)
+                if item is not None:
+                    return item
+        return None
+
+
+    def get_regex(self,key, group,  subgroup=None):
+        root1=self.myRegexDict
+        root2=self.FIELDTRANSFORMSATTRIBUTES
+        if subgroup is None:
+            try:
+                return root1[group][key],root2[group][key]
+            except:
+
+                exit(-1)
         else:
-            print("get_uncompiled_regex :group {:} not found in myRegexDict".format(group))
+            return root1[group][subgroup][key],root2[group][subgroup][key]
 
-
-    def get_regex(self,group,key, subgroup=None):
-        if group in self.myRegexDict.keys():
-            if subgroup is None:
-                return self.myRegexDict[group][key]
-            else:
-                if subgroup in self.myRegexDict[group].keys():
-                    return self.myRegexDict[group][subgroup][key]
-                else:
-                    print("get_regex :subgroup {:} not found in myRegexDict".format(subgroup))
-        else:
-            print("get_regex :group {:} not found in myRegexDict".format(group))
-
-
-    def compile_regex_groups(self,group, subgroup=None):
-        if group in self.FIELDTRANSFORMSATTRIBUTES.keys():
-            if subgroup is None:
-                myDict=self.FIELDTRANSFORMSATTRIBUTES[group]
-                self.myRegexDict[group]={}
-                for Item in myDict.keys():
-                    value = myDict[Item]
-                    try:
-                        self.myRegexDict[group][Item]=re.compile(value)
-                    except:
-                        print("compile_regex_groups :ERROR IN compiling regex for group {:}: ".format(group))
-                        print("Item:",Item, " Value:",value)
-
-            else:
-                if subgroup in self.FIELDTRANSFORMSATTRIBUTES[group]:
-                    myDict=self.FIELDTRANSFORMSATTRIBUTES[group][subgroup]
-                    self.myRegexDict[group]={}
-                    for Item in myDict.keys():
-                        value = myDict[Item]
-                        try:
-                            self.myRegexDict[group][subgroup][Item]=re.compile(value)
-                        except:
-                            print("ERROR IN compiling regex for group {:}: ".format(group))
-                            print("Item:",Item, " Value:",value)
-                else:
-                    print("compile_regex_groups: subgroup {:} not present in application configdata json".format(subgroup))             
-        else:
-            print("compile_regex_groups: group {:} not present in application configdata json".format(group))                    
 
 
     def get_reporttype(self,customname=""):
@@ -792,31 +802,32 @@ class report():
 
 
     def split_string(self, inputstring, resulttype,join=[],joiner='-'):
-        Regex = self.get_regex("split_string",resulttype)
-        Result= Regex.match(inputstring)
-        if Result:
-            #print(vmname,resulttype,Result, "-".join (Result.groups()))
-            if len(join)==0:
-                return joiner.join (Result.groups())
+        CompiledRegexList,UncompiledRegexList = self.get_regex(resulttype,"split_string")
+        for Regex in CompiledRegexList:
+            Result= Regex.match(inputstring)
+            if Result:
+                #print(vmname,resulttype,Result, "-".join (Result.groups()))
+                if len(join)==0:
+                    return joiner.join (Result.groups())
+                else:
+                    resstring=""
+                    for groupid in join:
+                        resstring=joiner.join(Result.groups(groupid))
+                    return resstring 
             else:
-                resstring=""
-                for groupid in join:
-                    resstring=joiner.join(Result.groups(groupid))
-                return resstring 
-        else:
-            #print("split_string : parsed ", inputstring," to find ", resulttype," but REGEX did not find result")
-            try:
-                print()
-                retval = "?"*self.FIELDLENGTHS[resulttype]
+                #print("split_string : parsed ", inputstring," to find ", resulttype," but REGEX did not find result")
+                try:
+                    print()
+                    retval = "?"*self.FIELDLENGTHS[resulttype]
 
-                #print("DEBUG Split_string retval:",retval)
-                return retval
-                
-            except:
-                print("-------------------  APPLICATION ERROR: --------------------------")
-                print("split_string : FIELDLENGTHS does not have field ",resulttype)
-                print("-------------------------------------------------------------------")
-                exit(-1)
+                    #print("DEBUG Split_string retval:",retval)
+                    return retval
+                    
+                except:
+                    print("-------------------  APPLICATION ERROR: --------------------------")
+                    print("split_string : FIELDLENGTHS does not have field ",resulttype)
+                    print("-------------------------------------------------------------------")
+                    exit(-1)
             
 
 
@@ -906,6 +917,85 @@ class report():
         resultdict={}
         messagedict_withhighlights={}
         JSONParsed_Dict={}
+        #print("DEBUG1:")
+        #print(json.dumps(messagedict,indent=10))
+        for myKey in [x for x in list(messagedict.keys()) if x not in ['parsed_values', 'data_with_highlights', 'json_parsed_values']]:
+            if LOCALDEBUG:
+                print("-------------------")
+                print("DEBUG TIER 0 myKey:",myKey)
+            try:
+                PayloadToParse= messagedict[myKey].lower().strip()
+            except:
+                print("Message parser ERROR")
+                print(type( messagedict[myKey]))
+                print("messagedict.keys():",messagedict.keys())
+                print("myKey:",myKey)
+                print("messagedict[myKey]:",messagedict[myKey])
+                exit(-1)
+
+            ModifiedPayload=PayloadToParse  
+            counter=0
+            countermax=len(self.Colorset["ReverseList"])
+            Legenda_of_Colors={}
+            for MyRegexKey in self.myRegexDict["message_parser"].keys():
+                #if LOCALDEBUG:
+                #    print("DEBUG TIER 1: MyRegexKey:",MyRegexKey)
+                #    print("DEBUG TIER 1 : self.myRegexDict['message_parser'].keys():",self.myRegexDict["message_parser"].keys())
+                MyRegexListPerKey,MyUncompiledRegexListPerKey=self.get_regex(MyRegexKey,"message_parser" )
+
+                for MyRegex in MyRegexListPerKey:
+                    PerKeyRegexCounter=MyRegexListPerKey.index(MyRegex)
+                    #ResultTemp_search=MyRegex.search(PayloadToParse, re.DOTALL)
+                    MyUncompiledRegex=MyUncompiledRegexListPerKey[PerKeyRegexCounter]
+                    ResultIterator=[OneSearch for OneSearch in MyRegex.finditer(PayloadToParse)]
+                    for ResultTemp_search in ResultIterator:
+                        #print(ResultTemp_search)
+                        var_Search_Matchdict=ResultTemp_search.groupdict()
+                        OutputKey="result"
+                        if ResultTemp_search.groupdict()[OutputKey] != None:
+                            MatchingResultsListForKey=[ResultTemp_search.groupdict()[OutputKey] ]
+                            #print("Result:",Result)
+                            if MyRegexKey not in resultdict.keys():
+                                resultdict[MyRegexKey]=[]
+                            #print("Key:",myKey," MatchingResultsListForKey:",MatchingResultsListForKey)
+                            #print("MatchingResultsListForKey is len0):",len(MatchingResultsListForKey))
+                            for ValueFound in MatchingResultsListForKey :
+                                #print("ValueFound:",ValueFound)
+                                #print("ValueFound is None:",ValueFound is None)
+                                if ValueFound:
+                                    if ValueFound is not None:
+                                        if len(ValueFound)>0 :
+                                            if ValueFound not in resultdict[MyRegexKey]:
+                                                #print(x,"--",type(x))
+                                                resultdict[MyRegexKey].append(ValueFound)
+                            
+                        #print("resultdict:",json.dumps(resultdict,indent=4))
+
+                        ForeColor=self.Colorset["ReverseList"][counter]
+                        ResetColor=self.RESET
+                        ModifiedPayload = re.sub(MyUncompiledRegex,
+                            lambda x :  ForeColor+x.group(0)+ResetColor,
+                            #lambda x :  menu.Backg_Red_ForeG_White+x.group(0)+menu.Backg_Default,
+                            ModifiedPayload)
+                        Legenda_of_Colors[myKey]=ForeColor+MyRegexKey+myKey+ResetColor
+                    messagedict_withhighlights[myKey]=ModifiedPayload
+
+
+                    IsJSON,TestDict= self.payload_json_parser(PayloadToParse)
+                    if IsJSON:
+                        JSONParsed_Dict[myKey]=TestDict
+                counter+=1
+                counter %=countermax
+
+        return resultdict,messagedict_withhighlights,JSONParsed_Dict,Legenda_of_Colors
+
+ # ----------------------------------------------------------------------------------------------------------------
+    def message_parser_OLD(self,messagedict):
+        #print("-------report_library.py:message_parser------------")
+        LOCALDEBUG=0
+        resultdict={}
+        messagedict_withhighlights={}
+        JSONParsed_Dict={}
         for myKey in messagedict.keys():
             if LOCALDEBUG:
                 print("-------------------")
@@ -916,8 +1006,7 @@ class report():
             for MyRegexKey in self.myRegexDict["message_parser"].keys():
                 if LOCALDEBUG:
                     print("DEBUG TIER 1: MyRegexKey:",MyRegexKey)
-                MyRegex=self.get_regex("message_parser",MyRegexKey)
-                GoOnSearching=True
+                MyRegex=self.get_regex(MyRegexKey,"message_parser")
                 
                 ResultTemp_search=MyRegex.search(PayloadToParse, re.DOTALL)
                 ResultIterator=[OneSearch for OneSearch in MyRegex.finditer(PayloadToParse)]
@@ -961,8 +1050,7 @@ class report():
                     JSONParsed_Dict[myKey]=TestDict
         
         return resultdict,messagedict_withhighlights,JSONParsed_Dict
-
-    
+   
     def calc_max_percentage(self,num1, den1, num2, den2):
         retval= int(100*max(float (num1) / float (den1) , float (num2)/ float (den2)))
         return retval
@@ -1080,6 +1168,7 @@ class dynamic_report(report):
 # -------------------------------------------------------------------------------------------------------------------------
 class menu:
  
+        
     # -------------------------------------------------------------------------------------------------------------------------
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -1093,14 +1182,19 @@ class menu:
     White = '\033[97m'
     Yellow = '\033[93m'
     Magenta = '\033[95m'
+    DarkRed="\033[31;1;4"
+
     Grey = '\033[90m'
     Black = '\033[90m'
     Backg_Yellow= '\033[1;42m'
     Backg_Green= '\033[1;42m'
     Backg_Default='\033[1;0m'
     Backg_Red_ForeG_White= '\033[40;7m'+White
+    Backg_Red='\033[40;7m'
     BackgRedBlink='\033[41;5m'
     Default = '\033[99m'
 
-    ColorsList =(OKBLUE,OKCYAN,OKGREEN,WARNING,FAIL,White,Yellow,Magenta,Grey)
+    
+
+    ColorsList2 =(Backg_Red+OKBLUE,Backg_Red+OKCYAN,OKGREEN,WARNING,FAIL,White,Yellow,Magenta,Grey)
 
