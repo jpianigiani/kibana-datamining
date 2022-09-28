@@ -5,6 +5,7 @@
 
 The ssh-proxy configuration ,as well the elasticsearch URL, is in configdata.json: the selection of the ENDPOINT name (via the -e parameter) (and the elasticsearch data view e.g fluentd.* = syslogs, alarms= nims-ca-em*) allows to select the ElasticSearch Data view  to visualize alarms, logs , or vendor specific logs.
 
+
 {
         
  {
