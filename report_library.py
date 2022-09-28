@@ -249,10 +249,14 @@ class report():
     ReportTotalUsage = []
     #Select RGB foreground color
 
-    def __init__(self,params):
+    def __init__(self,params, CustomReportTypePrefix=None):
         #super().__init__()
         self.Report = []
-        self.ReportType=self.get_reporttype()
+        if CustomReportTypePrefix:
+            TypePrefix=CustomReportTypePrefix+"_"
+        else:
+            TypePrefix=""
+        self.ReportType=TypePrefix+self.get_reporttype()
         self.State=''
         self.KEYS_KEYNAME="_KEYS"
         self.SORTINGKEYS_KEYNAME="_SORTING_KEYS"
@@ -357,11 +361,11 @@ class report():
         self.ReportTotalUsage = []
 
     def set_name(self,myname):
-        self.name=myname
+        self.name=myname.upper()
         self.ReportFile = open(self.FILESSTRUCTURE["PathForOutputReports"]+"/"+self.name, 'w')
 
     def set_state(self,mystatus):
-        self.State=mystatus
+        self.State=mystatus.upper()
         self.write_line_to_file(mystatus)
 
     def write_line_to_file(self,line):
@@ -374,6 +378,7 @@ class report():
         try:
             return self.REPORTFIELDGROUP[self.ReportType+self.KEYS_KEYNAME]
         except:
+            print("ERROR: get_keys: REPORTTYPE=",self.ReportType)
             self.PARAMS.cast_error( "00007","get_keys :{:}".format(self.ReportType+self.KEYS_KEYNAME))
         
 
@@ -402,7 +407,14 @@ class report():
                 record[self.get_keys().index(mykey)]=value
 
         else:
+            #try:
             record[self.get_keys().index(mykey)]=value
+            #except:
+            #    print("ERROR IN UpdateLastRecordValueByKey")
+            #    print("Report: {:} of type {:}",self.name,self.ReportType)
+            #    print("Current keys:",self.get_keys())
+            #    print("Searching key :",mykey)
+            #    exit(-1)
 
     def FindRecordByKeyValue(self, mykey, value):
         MyFieldIndex=self.get_keys().index(mykey)
@@ -672,7 +684,8 @@ class report():
             key=reportkeys[row_itemnumber]
             currentrecord[key]=record[row_itemnumber]
             columnname = reportkeys[row_itemnumber]
-            length = self.FIELDLENGTHS[columnname]
+            length= self.get_fieldlength(columnname)
+            #length = self.FIELDLENGTHS[columnname]
             FormatString_SingleValue="{:"+str( length)+"s}"
             try:
                 transform = self.FIELDTRANSFORMS[columnname]
@@ -1198,3 +1211,5 @@ class menu:
 
     ColorsList2 =(Backg_Red+OKBLUE,Backg_Red+OKCYAN,OKGREEN,WARNING,FAIL,White,Yellow,Magenta,Grey)
 
+
+    

@@ -27,16 +27,26 @@
 ,   
 "Reports_Keys" : 
     {
-        "REPORT_KEYS" :
+    "LOGS_REPORT_KEYS" :
         [
             "@timestamp", "_index","host","ident","severity","message"
         ],
-    "REPORT_SORTING_KEYS" : 
-        ["time" ],     
-    "REPORT_MULTILINE_KEYS":{
+    "LOGS_REPORT_SORTING_KEYS" : 
+        ["@timestamp" ],     
+    "LOGS_REPORT_MULTILINE_KEYS":{
                 "0":["@timestamp", "_index","host","ident","severity"],
                 "1":["message"]
-            }
+            },
+    "ALARMS_REPORT_KEYS" :
+    ["@timestamp","_index","Host","ident","ci-id","severity","data_source","fluentd_tag","summary","additional_text",
+    "nims-alarm.alarmrawdata.state","nims-alarm.nimsmetainfo.identifier"],
+    "ALARMS_REPORT_SORTING_KEYS" : 
+        ["@timestamp" ],     
+    "ALARMS_REPORT_MULTILINE_KEYS":{
+                "0":["@timestamp","_index","Host","ident","ci-id","severity","data_source","fluentd_tag","nims-alarm.alarmrawdata.state","nims-alarm.nimsmetainfo.identifier"],
+                "1":["summary"],
+                "2":["additional_text"]
+                }
        
     },
 "FieldLenghts":
@@ -44,7 +54,7 @@
         "time":10, 
         "@timestamp": 20, 
         "_index": 50, 
-        "host":90,
+        "host":90,"Host":90,
         "ident": 45, 
         "severity": 10, 
         "message": 200,
@@ -54,6 +64,8 @@
         "vendor":10,
         "ipv4@":16,
         "error":30,
+        "summary":90,
+        "additional_text":90,
         "default":10
     },
 "FieldLists" :

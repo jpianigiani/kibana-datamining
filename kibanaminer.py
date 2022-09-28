@@ -67,29 +67,47 @@ class kibanaminer():
 #------------------------------------------------------------------------------------------------------------------------------------
 
     def __init__(self, args):
+        self.screenrows, self.screencolumns = os.popen('stty size', 'r').read().split()
+        self.ScreenWitdh = int(self.screencolumns)
+        self.Stringa0="{0: ^"+str(self.ScreenWitdh)+"}"
+        self.FOREANDBACKGROUND='\033[38;5;{:d};48;5;{:d}m'
+        self.RESETCOLOR='\033[0m'
         self.CONFIGFILENAME="configdata.json"
         self.QUERYFILENAME="query_generic.json"
         with open(self.CONFIGFILENAME,"r") as file2:
             self.configdata=json.load(file2)
         #self.TwoLevelParseFields=configdata["two_level_parse"]
         self.ENDPOINT=args.ENDPOINT
-        self.FieldsList=self.configdata[self.ENDPOINT]["fields"]
 
-        self.elastic_url = self.configdata[self.ENDPOINT]["url"]
+        if self.ENDPOINT in self.configdata.keys():
+            self.elastic_url = self.configdata[self.ENDPOINT]["url"]
+            self.Endpoint_specific_ReportType=args.ENDPOINT.upper()
+
+        else:
+            print(self.FOREANDBACKGROUND.format(255,9)+self.Stringa0.format( ("Available endpoints in configdata.json: {:}. CLI command requested endpoint is {:}".format(list(self.configdata.keys()),self.ENDPOINT))))
+            print(self.RESETCOLOR)
+            exit(-1)
+
+        # Each Endpoint in Elasticsearch may (and will ) have distinct fields e.g. alarms from nims-ca-em have different fields than
+        # fluentd* for logs. So distinct report keys must exist for eac report type.
+        # Upon creating the Kibanaminer object, the report type (part of report_library.py) needs to be set 
+        # in report_library, report type is the INITIAL string to match the report keys so it is important to have distinct keys for logs and alarms, since the elasticsearch fields are different for those two cases
+
+        self.FieldsList=self.configdata[self.ENDPOINT]["fields"]
+        self.ReportTypePerEndPoint = self.configdata[self.ENDPOINT]["report_type_prefix"].upper()
+
         self.session = requests.Session()
         self.session.verify = False
-        self.session.proxies =self.configdata[self.ENDPOINT]["proxies"] 
+        self.session.proxies =self.configdata["common"]["proxies"] 
         print(self.session.proxies)
-        self.HEADERS = self.configdata[self.ENDPOINT]["headers"]
+        self.HEADERS = self.configdata["common"]["headers"]
         self.query={}
         self.DEBUG=args.DEBUG
         if self.DEBUG:
             print("DEBUG Mode")
-        self.screenrows, self.screencolumns = os.popen('stty size', 'r').read().split()
-        self.ScreenWitdh = int(self.screencolumns)
+
         self.SearchFilter={}
-        self.FOREANDBACKGROUND='\033[38;5;{:d};48;5;{:d}m'
-        self.RESETCOLOR='\033[0m'
+
 
     def parse_date(self, passed_values_list, returntype="kibana"):
         dateregex=[]
@@ -138,6 +156,7 @@ class kibanaminer():
                 exit(-1)
 
         timematch=False
+
         for item in timeregex:
             regex=re.compile(item)
             result_iterator=[OneSearch for OneSearch in regex.finditer(string_to_parse)]
@@ -145,16 +164,22 @@ class kibanaminer():
                 Result_Dict = SearchResult.groupdict()
                 if "HMS" in Result_Dict.keys():
                     format1+=" %H:%M:%S"                
-                    datematch=True
+                    timematch=True
                     if not Result_Dict['SS']:
                         Result_Dict['SS']="00"
                     normalized_timevalue=Result_Dict["HH"]+':'+Result_Dict["MM"].rjust(2,'0')+':'+Result_Dict["SS"].rjust(2,'0')
+
                 else:
                     print("no valid time provided :", string_to_parse,".. using 00:00:00 as default")
                     normalized_timevalue="00:00:00"
+            if timematch:
+                break
+        if not timematch:
+            normalized_timevalue="00:00:00"
+            format1+=" %H:%M:%S"                
 
-        
         actual_datetimevalue_string=normalized_datevalue+' '+normalized_timevalue
+        print("FINAL: actual_datetimevalue_string :",actual_datetimevalue_string)
         actual_datetimevalue=datetime.strptime(actual_datetimevalue_string,format1)
         print("FINAL: actual_datetimevalue :",actual_datetimevalue)
                 
@@ -197,7 +222,8 @@ class kibanaminer():
             self.localRegexDict["EXCLUDEWORDSFLAG"]=False
         
         self.RECORDSTOGET=args.RECORDS
-
+        stringa1= self.Stringa0.format( (" Next query filter : from {:} to {:}".format(self.QueryFrom,self.QueryTo)))
+        print(self.FOREANDBACKGROUND.format(0,255)+stringa1+self.RESETCOLOR)
 
 #------------------------------------------------------------------------------------------------------------------------------------
     def set_filter(self):
@@ -489,8 +515,7 @@ class kibanaminer():
             MyDict=InputCharacterMap[Item]
             MenuItem=" [{:1s}] {:}   ".format(InputCharacterMap[Item]["name"],InputCharacterMap[Item]["title"])
             MenuString+=MenuItem        
-        Stringa0="{0: ^"+str(self.ScreenWitdh)+"}"
-        Stringa=self.FOREANDBACKGROUND.format(255,4)+Stringa0.format(MenuString)+self.Backg_Default
+        Stringa=self.FOREANDBACKGROUND.format(255,4)+self.Stringa0.format(MenuString)+self.Backg_Default
         print(Stringa)
         while var_Continue:
             CharSequence=''
@@ -601,9 +626,8 @@ class kibanaminer():
             else:
                 StringaExclWords=""                
             print(self.FOREANDBACKGROUND.format(255,4))
-            Stringa0="{0: ^"+str(pars.ScreenWitdh)+"}"
             Stringa1="{:} query from {:15s} to {:15s} : Words included:[{:s}] - Words excluded: [{:s}])".format(self.ENDPOINT,datetime.strftime(self.QueryFromDatetime,"%b %d, %H:%M:%S"),datetime.strftime(self.QueryToDatetime,"%b %d, %H:%M:%S"),StringaWords,StringaExclWords)
-            Stringa=Stringa0.format(Stringa1)
+            Stringa=self.Stringa0.format(Stringa1)
             print(Stringa)
             Stringa0="{0:_^"+str(pars.ScreenWitdh)+"}"
             Stringa1=" RECORD: {:3d} OF {:3d}  (from {:15s} to {:15s})".format(key,mylistlen-1, datetime.strftime(self.Tstart,"%b %d, %H:%M:%S"),datetime.strftime(self.Tend,"%b %d, %H:%M:%S"))
@@ -683,17 +707,24 @@ class kibanaminer():
 
 
     def adjust_filter(self):
+        
         TimeCoveredbyPreviousQuery=self.Tend - self.Tstart
         NumberOfRecords = self.RECCOUNT
+        print("TIMEGAP = ",TimeCoveredbyPreviousQuery)
         self.QueryFromDatetime = self.Tend
+        self.QueryFrom=datetime.strftime(self.QueryFromDatetime,"%Y-%m-%dT%H:%M:%S")
         PreviousTimeTo =self.QueryToDatetime 
         self.QueryToDatetime=PreviousTimeTo
+        self.QueryTo=datetime.strftime(self.QueryToDatetime,"%Y-%m-%dT%H:%M:%S")
+        stringa1= self.Stringa0.format( (" Next query filter : from {:} to {:}".format(self.QueryFrom,self.QueryTo)))
+        print(self.FOREANDBACKGROUND.format(0,255)+stringa1+self.RESETCOLOR)
 #------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------------------
 def main(arguments):
     os.system('clear')
     programname= arguments[0].split(".")[0]
     MyPars=parameters(programname)
+    
     MyReport=report(MyPars)
     parser = argparse.ArgumentParser()
     CurrentTime = datetime.now()
@@ -711,7 +742,9 @@ def main(arguments):
     parser.add_argument("-e","--ENDPOINT", help="ElasticSearch Data view to query: logs (default) for logs, alarms for alarms. See configdata.json",  default="logs", required=False)
 
     args=parser.parse_args()
+
     MyElasticSearch=kibanaminer(args)
+    MyReport=report(MyPars,MyElasticSearch.Endpoint_specific_ReportType)
     # Initial setting of query parameters
     MyElasticSearch.initialize_filter_from_args(args)
     ContinueHere=True
@@ -725,7 +758,7 @@ def main(arguments):
     enriched_file= open("kibanaminer.medium.out","w")
     enriched_file.write(json.dumps(MyElasticSearch.enriched_data,indent=4))
     MyElasticSearch.add_to_report(MyReport)
-    MyReport.set_name("KIBANA_LOG_REPORT")
+    MyReport.set_name("ELASTICSEARCH"+MyElasticSearch.Endpoint_specific_ReportType+"_REPORT")
     MyReport.print_report(MyPars)
 
 if __name__ == '__main__':
