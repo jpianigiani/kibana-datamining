@@ -7,47 +7,47 @@ The ssh-proxy configuration ,as well the elasticsearch URL, is in configdata.jso
 
 {
         
-        "syslog":{
-                "url":"http://172.23.95.77:9200/fluentd.*/_search",
-                "proxies": {
-                    "https": "socks5h://127.0.0.1:5000",
-                    "http": "socks5h://127.0.0.1:5000"
+ {
+    "common":{                
+        "proxies": {
+                "https": "socks5h://127.0.0.1:5000",
+                "http": "socks5h://127.0.0.1:5000"
                 },
-                "headers":{
+        "headers":{
                     "Content-Type": "application/json",
                     "kbn-xsrf": "True"
                 }
-            },
-
-         "hpe_logs":{
-                "url":"http://172.23.95.77:9200/fluentd.nims-ca-logs-hpe*/_search",
-                "proxies": {
-                    "https": "socks5h://127.0.0.1:5000",
-                    "http": "socks5h://127.0.0.1:5000"
-                },
-                "headers":{
-                    "Content-Type": "application/json",
-                    "kbn-xsrf": "True"
-                },
+        },    
+     "logs":{
+                "url":"http://172.23.95.77:9200/fluentd.*/_search",
                 "fields":["@timestamp","_index","host","ident","severity","message"],
-                "timestamp_field":"@timestamp"
+                "timestamp_field":"@timestamp",
+                "report_type_prefix":"logs"
+            },
+
+    "hpe_logs":{
+                "url":"http://172.23.95.77:9200/fluentd.nims-ca-logs-hpe*/_search",
+                "fields":["@timestamp","_index","host","ident","severity","message"],
+                "timestamp_field":"@timestamp",               
+                "report_type_prefix":"logs"
+
 
             },
-          "alarms":{
+    "contrailinsight_logs":{
+                "url":"http://172.23.95.77:9200/fluentd.nims-ca-log-contrailinsights*/_search",           
+                "fields":["@timestamp","_index","host","ident","severity","message"],
+                "timestamp_field":"@timestamp",               
+                "report_type_prefix":"logs"
+
+            },
+    "alarms":{
                 "url":"http://172.23.95.77:9200/nims-ca-em*/_search",
-                "proxies": {
-                    "https": "socks5h://127.0.0.1:5000",
-                    "http": "socks5h://127.0.0.1:5000"
-                },
-                "headers":{
-                    "Content-Type": "application/json",
-                    "kbn-xsrf": "True"
-                },
                 "fields":["@timestamp","_index","Host","ident","ci-id","severity","data_source","fluentd_tag","summary","additional_text",
                 "nims-alarm.alarmrawdata.state","nims-alarm.nimsmetainfo.identifier"],
-                "timestamp_field":"@timestamp"
+                "timestamp_field":"@timestamp",               
+                "report_type_prefix":"alarms"
+            }
 }
-
 in the example above, i am using port 5000 forwarding to nbg992 by "ssh -o ServerAliveInterval=59 -ND 5000 DT_Nbg992_Shell"
 
 ---------------------------------------------------------------------------------
