@@ -78,10 +78,11 @@ class kibanaminer():
             self.configdata=json.load(file2)
         #self.TwoLevelParseFields=configdata["two_level_parse"]
         self.ENDPOINT=args.ENDPOINT
+        self.NOTES=args.NOTES
 
         if self.ENDPOINT in self.configdata.keys():
             self.elastic_url = self.configdata[self.ENDPOINT]["url"]
-            self.Endpoint_specific_ReportType=args.ENDPOINT.upper()
+            self.Endpoint_specific_ReportType=self.configdata[args.ENDPOINT]["report_type_prefix"].upper()
 
         else:
             print(self.FOREANDBACKGROUND.format(255,9)+self.Stringa0.format( ("Available endpoints in configdata.json: {:}. CLI command requested endpoint is {:}".format(list(self.configdata.keys()),self.ENDPOINT))))
@@ -192,6 +193,8 @@ class kibanaminer():
     def initialize_filter_from_args(self,args):
         self.QueryFrom, self.QueryFromDatetime= self.parse_date(args.FROM)
         self.QueryTo,self.QueryToDatetime= self.parse_date(args.TO)
+        self.QueryRunAt =datetime.now()
+
         self.localRegexDict={}
         if args.WORDS:
             if self.DEBUG:
@@ -225,8 +228,36 @@ class kibanaminer():
         stringa1= self.Stringa0.format( (" Next query filter : from {:} to {:}".format(self.QueryFrom,self.QueryTo)))
         print(self.FOREANDBACKGROUND.format(0,255)+stringa1+self.RESETCOLOR)
 
+
+
+    def log_elasticsearch_query(self,args):
+        def namespace_to_dict(namespace):
+            return {
+                    k: namespace_to_dict(v) if isinstance(v, argparse.Namespace) else v
+                    for k, v in vars(namespace).items()
+                }
+        # SAVE QUERY DETAIL IN ELASTICSEARCH.QUERIES.LOG file
+        print(args)
+        self.UniqueQueryId= {}
+        self.ExecutionTime=datetime.strftime(datetime.now(),"%Y%m%d-%H%M%S")
+        #print("EXECUTION TIME: ", ExecutionTime)
+        try:
+            with open("ELASTICSEARCH.QUERIES.LOG","r") as file1:
+                ExecutionLog= json.load(file1) 
+                #print(json.dumps(ExecutionLog,indent=4))
+        except:
+            ExecutionLog={}
+
+        self.UniqueQueryId[self.ExecutionTime]=namespace_to_dict(args)
+        ExecutionLog[self.ExecutionTime]=namespace_to_dict(args)
+        print(self.FOREANDBACKGROUND.format(255,9)+"TIMESTAMP for this query :",self.ExecutionTime,self.RESETCOLOR)
+        with open("ELASTICSEARCH.QUERIES.LOG","w") as file1:
+            file1.write(json.dumps(ExecutionLog))
+ 
+
 #------------------------------------------------------------------------------------------------------------------------------------
     def set_filter(self):
+
         with open(self.QUERYFILENAME, "r") as file1:
                 self.query = json.load(file1)
         self.query["size"]= self.RECORDSTOGET
@@ -343,7 +374,7 @@ class kibanaminer():
             exit(-1)
         print("response code {}".format(self.request.status_code))
         self.queryresult=self.request.json()
-        with open("kibanaminer.out","w") as file1:
+        with open(self.ExecutionTime+"kibanaminer"+self.NOTES+"-"+self.ExecutionTime+".out","w") as file1:
             file1.write(json.dumps(self.queryresult,indent=10))
 #------------------------------------------------------------------------------------------------------------------------------------
     def transform_data3(self,arguments ):
@@ -460,7 +491,7 @@ class kibanaminer():
             print("----------------------------------------------------------------------------")
             exit(-1)
         self.Tend=datetime.strptime(self.transformed_data[self.count-1]["@timestamp"][:-16],"%Y-%m-%dT%H:%M:%S")
-        with open("kibanaminer.short.out","w") as file1:
+        with open("kibanaminer.short"+self.NOTES+"-"+self.ExecutionTime+".out","w") as file1:
             file1.write(json.dumps(self.transformed_data,indent=10))
 
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -740,11 +771,12 @@ def main(arguments):
     parser.add_argument("-d","--DEBUG", help="If specified, DEBUG mode set to true", action='store_true')
     parser.add_argument("-r","--RECORDS", help="N. of hits returned by query, default=1000", type=int, default=1000, required=False)
     parser.add_argument("-e","--ENDPOINT", help="ElasticSearch Data view to query: logs (default) for logs, alarms for alarms. See configdata.json",  default="logs", required=False)
-
+    parser.add_argument("-n","--NOTES", help="Description of what you are searching for",  default="", required=False)
     args=parser.parse_args()
 
     MyElasticSearch=kibanaminer(args)
     MyReport=report(MyPars,MyElasticSearch.Endpoint_specific_ReportType)
+    MyElasticSearch.log_elasticsearch_query(args)
     # Initial setting of query parameters
     MyElasticSearch.initialize_filter_from_args(args)
     ContinueHere=True
@@ -755,7 +787,7 @@ def main(arguments):
         ContinueHere, action = MyElasticSearch.scan_and_parse_messages(args,MyReport, MyPars)
         if action=="next":
             MyElasticSearch.adjust_filter()
-    enriched_file= open("kibanaminer.medium.out","w")
+    enriched_file= open("kibanaminer.medium"+MyElasticSearch.NOTES+"-"+MyElasticSearch.ExecutionTime+".out","w")
     enriched_file.write(json.dumps(MyElasticSearch.enriched_data,indent=4))
     MyElasticSearch.add_to_report(MyReport)
     MyReport.set_name("ELASTICSEARCH"+MyElasticSearch.Endpoint_specific_ReportType+"_REPORT")

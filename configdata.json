@@ -38,9 +38,4 @@
                 "timestamp_field":"@timestamp",               
                 "report_type_prefix":"alarms"
             }
-            
-
-
-
-
 }

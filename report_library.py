@@ -105,7 +105,7 @@ class parameters:
         except:
             traceback.print_exc(limit=None, file=None, chain=True)
             print("#-------------------------------------------------------------------------------------------------------------------")
-            print(" CRITICAL! : object class PARAMETERS, __init__ did not find the application configuration file {:}".format(self.PATHFORAPPLICATIONCONFIGDATA+CONFIGFILENAME))
+            print(" CRITICAL! : object class PARAMETERS, __init__ did not find the application errors dictionary  file {:}".format(self.PATHFORAPPLICATIONCONFIGDATA+ERRORFILENAME))
             print("\t Files {:} and  {:} must be , from the directory as python main executable, as follows: {:}".format(CONFIGFILENAME, ERRORFILENAME,self.PATHFORAPPLICATIONCONFIGDATA))
             print("#-------------------------------------------------------------------------------------------------------------------")
             exit(-1)
@@ -906,11 +906,12 @@ class report():
             ItemsList=message.split(' ')
             #print("ItemsList:",ItemsList)
             for Item in ItemsList:
-                kv_pair=Item.split('=')
+                kv_pair=Item.strip().split('=')
                 if len(kv_pair)==2:
                     TestDict[kv_pair[0]]=kv_pair[1]
                     IsJSON=True
                 kv_pair=Item.split(":")
+                #print("kv_pair:",kv_pair)
                 if len(kv_pair)==2:
                     TestDict[kv_pair[0]]=kv_pair[1]
                     IsJSON=True

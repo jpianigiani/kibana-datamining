@@ -43,9 +43,10 @@
     "ALARMS_REPORT_SORTING_KEYS" : 
         ["@timestamp" ],     
     "ALARMS_REPORT_MULTILINE_KEYS":{
-                "0":["@timestamp","_index","Host","ident","ci-id","severity","data_source","fluentd_tag","nims-alarm.alarmrawdata.state","nims-alarm.nimsmetainfo.identifier"],
-                "1":["summary"],
-                "2":["additional_text"]
+                "0":["@timestamp","_index","Host","ident","ci-id","severity"],
+                "1":["data_source","fluentd_tag","nims-alarm.alarmrawdata.state","nims-alarm.nimsmetainfo.identifier"],
+                "2":["summary"],
+                "3":["additional_text"]
                 }
        
     },
@@ -60,7 +61,6 @@
         "message": 200,
         "api_call0":60,
         "api_call2":200,
-
         "vendor":10,
         "ipv4@":16,
         "error":30,
