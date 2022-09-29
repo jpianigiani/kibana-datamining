@@ -6,7 +6,7 @@
     },
 "ReportsSettings":
     { 
-    "ReportTypesNotToBePrintedOnScreen":[],
+    "ReportTypesNotToBePrintedOnScreen":["LOGS_REPORT", "ALARMS_REPORT"],
     "WrapLinesWhenWritingToFiles":true
     }
     ,
@@ -132,7 +132,8 @@
             "method": ["\b(?P<result>get|post|put)\b"],
             "vendor": ["(?P<result>jnp|msw|mav|hpe|nok|netcracker|rhel|junos|contrail)"],
             "mav_vnfname":["(?P<result>pcrt|pcmp|pccd|cram|scbc|cmem|crdb|ecac|ecxc|sccc|sdcc|vnfm)"],
-            "command":["(?P<result>[=: \";](command)[=: \"]+(.+\b))"]
+            "command":["(?P<result>[=: \";](command)[=: \"]+(.+\b))"],
+            "tap_name":["(?P<result>(tap[a-z,A-Z,0-9]{8}[-][a-z,A-Z,0-9]{2}))"]
 
 
 

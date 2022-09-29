@@ -249,7 +249,11 @@ class kibanaminer():
             ExecutionLog={}
 
         self.UniqueQueryId[self.ExecutionTime]=namespace_to_dict(args)
-        ExecutionLog[self.ExecutionTime]=namespace_to_dict(args)
+        self.UniqueQueryId[self.ExecutionTime]["FROM"]=self.QueryFrom
+        self.UniqueQueryId[self.ExecutionTime]["TO"]=self.QueryTo
+        #self.UniqueQueryId[self.ExecutionTime]["CMDLINE"]=" ".join(sys.argv)
+        ExecutionLog[self.ExecutionTime]=self.UniqueQueryId[self.ExecutionTime]
+
         print(self.FOREANDBACKGROUND.format(255,9)+"TIMESTAMP for this query :",self.ExecutionTime,self.RESETCOLOR)
         with open("ELASTICSEARCH.QUERIES.LOG","w") as file1:
             file1.write(json.dumps(ExecutionLog))
@@ -374,7 +378,7 @@ class kibanaminer():
             exit(-1)
         print("response code {}".format(self.request.status_code))
         self.queryresult=self.request.json()
-        with open(self.ExecutionTime+"kibanaminer"+self.NOTES+"-"+self.ExecutionTime+".out","w") as file1:
+        with open(self.ExecutionTime+"kibanaminer"+self.NOTES+"-"+self.ENDPOINT+"-"+self.ExecutionTime+".out","w") as file1:
             file1.write(json.dumps(self.queryresult,indent=10))
 #------------------------------------------------------------------------------------------------------------------------------------
     def transform_data3(self,arguments ):
@@ -491,7 +495,7 @@ class kibanaminer():
             print("----------------------------------------------------------------------------")
             exit(-1)
         self.Tend=datetime.strptime(self.transformed_data[self.count-1]["@timestamp"][:-16],"%Y-%m-%dT%H:%M:%S")
-        with open("kibanaminer.short"+self.NOTES+"-"+self.ExecutionTime+".out","w") as file1:
+        with open("kibanaminer.short"+self.NOTES+"-"+self.ENDPOINT+"-"+self.ExecutionTime+".out","w") as file1:
             file1.write(json.dumps(self.transformed_data,indent=10))
 
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -755,7 +759,6 @@ def main(arguments):
     os.system('clear')
     programname= arguments[0].split(".")[0]
     MyPars=parameters(programname)
-    
     MyReport=report(MyPars)
     parser = argparse.ArgumentParser()
     CurrentTime = datetime.now()
@@ -771,14 +774,15 @@ def main(arguments):
     parser.add_argument("-d","--DEBUG", help="If specified, DEBUG mode set to true", action='store_true')
     parser.add_argument("-r","--RECORDS", help="N. of hits returned by query, default=1000", type=int, default=1000, required=False)
     parser.add_argument("-e","--ENDPOINT", help="ElasticSearch Data view to query: logs (default) for logs, alarms for alarms. See configdata.json",  default="logs", required=False)
-    parser.add_argument("-n","--NOTES", help="Description of what you are searching for",  default="", required=False)
+    parser.add_argument("-n","--NOTES", help="Description of what you are looking for..",  default="", required=False)
     args=parser.parse_args()
 
     MyElasticSearch=kibanaminer(args)
     MyReport=report(MyPars,MyElasticSearch.Endpoint_specific_ReportType)
-    MyElasticSearch.log_elasticsearch_query(args)
     # Initial setting of query parameters
     MyElasticSearch.initialize_filter_from_args(args)
+    MyElasticSearch.log_elasticsearch_query(args)
+
     ContinueHere=True
     while ContinueHere:
         MyElasticSearch.set_filter()
@@ -787,7 +791,7 @@ def main(arguments):
         ContinueHere, action = MyElasticSearch.scan_and_parse_messages(args,MyReport, MyPars)
         if action=="next":
             MyElasticSearch.adjust_filter()
-    enriched_file= open("kibanaminer.medium"+MyElasticSearch.NOTES+"-"+MyElasticSearch.ExecutionTime+".out","w")
+    enriched_file= open("kibanaminer.medium"+MyElasticSearch.NOTES+MyElasticSearch.ENDPOINT+"-"+"-"+MyElasticSearch.ExecutionTime+".out","w")
     enriched_file.write(json.dumps(MyElasticSearch.enriched_data,indent=4))
     MyElasticSearch.add_to_report(MyReport)
     MyReport.set_name("ELASTICSEARCH"+MyElasticSearch.Endpoint_specific_ReportType+"_REPORT")
