@@ -243,20 +243,52 @@ class kibanaminer():
         #print("EXECUTION TIME: ", ExecutionTime)
         try:
             with open("ELASTICSEARCH.QUERIES.LOG","r") as file1:
-                ExecutionLog= json.load(file1) 
+                TRANSFORMEDDICT= json.load(file1) 
                 #print(json.dumps(ExecutionLog,indent=4))
         except:
-            ExecutionLog={}
+            TRANSFORMEDDICT={}
 
-        self.UniqueQueryId[self.ExecutionTime]=namespace_to_dict(args)
-        self.UniqueQueryId[self.ExecutionTime]["FROM"]=self.QueryFrom
-        self.UniqueQueryId[self.ExecutionTime]["TO"]=self.QueryTo
+        TempDictWithArgs=namespace_to_dict(args)
+        self.Notes=TempDictWithArgs["NOTES"].upper()
+        self.CombinedFromToString=self.QueryFrom+self.QueryTo
+        self.Endpoint=TempDictWithArgs["ENDPOINT"]
         #self.UniqueQueryId[self.ExecutionTime]["CMDLINE"]=" ".join(sys.argv)
-        ExecutionLog[self.ExecutionTime]=self.UniqueQueryId[self.ExecutionTime]
+        #ExecutionLog[self.ExecutionTime]=self.UniqueQueryId[self.ExecutionTime]
 
-        print(self.FOREANDBACKGROUND.format(255,9)+"TIMESTAMP for this query :",self.ExecutionTime,self.RESETCOLOR)
-        with open("ELASTICSEARCH.QUERIES.LOG","w") as file1:
-            file1.write(json.dumps(ExecutionLog))
+
+        if self.Notes not in TRANSFORMEDDICT.keys():
+            TRANSFORMEDDICT[self.Notes]={}
+        if self.CombinedFromToString not in TRANSFORMEDDICT[self.Notes].keys():
+            TRANSFORMEDDICT[self.Notes][self.CombinedFromToString]={}
+        if self.Endpoint not in TRANSFORMEDDICT[self.Notes][self.CombinedFromToString].keys():
+            TRANSFORMEDDICT[self.Notes][self.CombinedFromToString][self.Endpoint]={}
+        TRANSFORMEDDICT[self.Notes][self.CombinedFromToString][self.Endpoint][self.ExecutionTime]={}
+        CMDLINE="python3 kibanaminer.py "
+        for Item in TempDictWithArgs.keys():
+            if isinstance(TempDictWithArgs[Item],str):
+                CMDLINE+='--'+Item+' '+TempDictWithArgs[Item]+' '
+            elif  isinstance(TempDictWithArgs[Item],list):
+                CMDLINE+='--'+Item+' '+" ".join(TempDictWithArgs[Item])+' '
+            elif  isinstance(TempDictWithArgs[Item],bool):
+                if TempDictWithArgs[Item]:
+                    CMDLINE+='--'+Item+' '
+        TRANSFORMEDDICT[self.Notes][self.CombinedFromToString][self.Endpoint][self.ExecutionTime]["CommandLine"]=CMDLINE
+        TRANSFORMEDDICT[self.Notes][self.CombinedFromToString][self.Endpoint][self.ExecutionTime]["Record"]=TempDictWithArgs
+
+        #print(json.dumps(TRANSFORMEDDICT,indent=4))
+        print(self.FOREANDBACKGROUND.format(255,9)+self.Stringa0.format("TIMESTAMP FOR THIS QUERY :"+self.ExecutionTime)+self.RESETCOLOR)
+
+        if self.Notes!="DEFAULT":
+            with open("ELASTICSEARCH.QUERIES.LOG","w") as file1:
+                file1.write(json.dumps(TRANSFORMEDDICT,indent=4))
+            Stringa="QUERY SAVED IN ELASTICSEARCH.QUERIES.LOG, under keys: {:}, {:}, {:}".format(self.Notes,self.CombinedFromToString, self.Endpoint)
+            print(self.FOREANDBACKGROUND.format(255,9)+self.Stringa0.format(Stringa)+self.RESETCOLOR)
+        else:
+            Stringa="This query and its CLI parameters will not be saved in file ELASTICSEARCH.QUERIES.LOG"
+            print(self.FOREANDBACKGROUND.format(255,9)+self.Stringa0.format(Stringa)+self.RESETCOLOR)
+
+
+
  
 
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -378,7 +410,7 @@ class kibanaminer():
             exit(-1)
         print("response code {}".format(self.request.status_code))
         self.queryresult=self.request.json()
-        with open(self.ExecutionTime+"kibanaminer"+self.NOTES+"-"+self.ENDPOINT+"-"+self.ExecutionTime+".out","w") as file1:
+        with open("kibanaminer.rawdata."+self.NOTES+"-"+self.ENDPOINT+"-"+self.ExecutionTime+".out","w") as file1:
             file1.write(json.dumps(self.queryresult,indent=10))
 #------------------------------------------------------------------------------------------------------------------------------------
     def transform_data3(self,arguments ):
@@ -495,7 +527,7 @@ class kibanaminer():
             print("----------------------------------------------------------------------------")
             exit(-1)
         self.Tend=datetime.strptime(self.transformed_data[self.count-1]["@timestamp"][:-16],"%Y-%m-%dT%H:%M:%S")
-        with open("kibanaminer.short"+self.NOTES+"-"+self.ENDPOINT+"-"+self.ExecutionTime+".out","w") as file1:
+        with open("kibanaminer.short."+self.NOTES+"-"+self.ENDPOINT+"-"+self.ExecutionTime+".out","w") as file1:
             file1.write(json.dumps(self.transformed_data,indent=10))
 
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -635,9 +667,6 @@ class kibanaminer():
         #print("retval:",retval)
         return retval
 
-    def new_query_timewindow(self, args):
-        pass
-
 
 #------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -774,7 +803,7 @@ def main(arguments):
     parser.add_argument("-d","--DEBUG", help="If specified, DEBUG mode set to true", action='store_true')
     parser.add_argument("-r","--RECORDS", help="N. of hits returned by query, default=1000", type=int, default=1000, required=False)
     parser.add_argument("-e","--ENDPOINT", help="ElasticSearch Data view to query: logs (default) for logs, alarms for alarms. See configdata.json",  default="logs", required=False)
-    parser.add_argument("-n","--NOTES", help="Description of what you are looking for..",  default="", required=False)
+    parser.add_argument("-n","--NOTES", help="Description of what you are looking for..",  default="DEFAULT", required=False)
     args=parser.parse_args()
 
     MyElasticSearch=kibanaminer(args)
@@ -791,7 +820,7 @@ def main(arguments):
         ContinueHere, action = MyElasticSearch.scan_and_parse_messages(args,MyReport, MyPars)
         if action=="next":
             MyElasticSearch.adjust_filter()
-    enriched_file= open("kibanaminer.medium"+MyElasticSearch.NOTES+MyElasticSearch.ENDPOINT+"-"+"-"+MyElasticSearch.ExecutionTime+".out","w")
+    enriched_file= open("kibanaminer.medium."+MyElasticSearch.NOTES+MyElasticSearch.ENDPOINT+"-"+"-"+MyElasticSearch.ExecutionTime+".out","w")
     enriched_file.write(json.dumps(MyElasticSearch.enriched_data,indent=4))
     MyElasticSearch.add_to_report(MyReport)
     MyReport.set_name("ELASTICSEARCH"+MyElasticSearch.Endpoint_specific_ReportType+"_REPORT")
