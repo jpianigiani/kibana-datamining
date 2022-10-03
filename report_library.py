@@ -71,7 +71,9 @@ class parameters:
         self.ScreenWitdh = int(self.screencolumns)
         self.ColorsList =(menu.OKBLUE,menu.OKCYAN,menu.OKGREEN,menu.WARNING,menu.FAIL,menu.White,menu.Yellow,menu.Magenta,menu.Grey) 
         self.ERROR_REPORT=[]
-        
+        self.Stringa0="{0: ^"+str(self.ScreenWitdh)+"}"
+        self.FOREANDBACKGROUND='\033[38;5;{:d};48;5;{:d}m'
+        self.RESETCOLOR='\033[0m'
         #-------------------------------------------------------------------------------------------------------------------
         try:
 
@@ -564,7 +566,8 @@ class report():
             #print("________________________________ _________________ __________________________")
             #print("DEBUG MultiLineRowIndexString:",MultiLineRowIndexString)
             var_TotalKeys=self.get_keys()
-            MaxRows=64
+            MaxRows=256
+            MaxSizeofRows=MaxRows
             Lines=[['' for j in range(len(var_TotalKeys) )] for i in range(MaxRows*len(ListOfMultilineKeys))] 
             if self.MultiLineFlag:
                 var_LineKeys=self.get_multiline_keys()[MultiLineRowIndexString]
@@ -618,7 +621,7 @@ class report():
                     Lines[0][TableEntryIndex]=""
                     #exit(-1)    
                 else:
-                    for NofLinesPerRecEntry in range(RowsValue):
+                    for NofLinesPerRecEntry in range(min(RowsValue, MaxSizeofRows)):
                         stringa_start = NofLinesPerRecEntry*var_FieldLen
                         if (var_RecordEntryLen> stringa_start+ var_FieldLen  ):
                             stringa_end = (1+NofLinesPerRecEntry)*var_FieldLen
@@ -638,7 +641,9 @@ class report():
                     print("var_Entry:",var_Entry)
                     print("Lines:\n",Lines)
 
-            for i in range(MaxRows):
+            if MaxRows>MaxSizeofRows:
+                print(self.FOREANDBACKGROUND.format(255,9)+ "ERROR: Exceeding {:} rows for this record".format(MaxSizeofRows)+self.RESET)
+            for i in range(min(MaxRows,MaxSizeofRows)):
                 myline=''
                 for j in range(len(var_LineKeys)):
                     length=self.get_fieldlength(var_LineKeys[j])

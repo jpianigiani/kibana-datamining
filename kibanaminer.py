@@ -252,6 +252,9 @@ class kibanaminer():
         self.Notes=TempDictWithArgs["NOTES"].upper()
         self.CombinedFromToString=self.QueryFrom+self.QueryTo
         self.Endpoint=TempDictWithArgs["ENDPOINT"]
+        TempDictWithArgs["FROM"]=self.QueryFrom
+        TempDictWithArgs["TO"]=self.QueryTo
+
         #self.UniqueQueryId[self.ExecutionTime]["CMDLINE"]=" ".join(sys.argv)
         #ExecutionLog[self.ExecutionTime]=self.UniqueQueryId[self.ExecutionTime]
 
@@ -273,7 +276,7 @@ class kibanaminer():
                 if TempDictWithArgs[Item]:
                     CMDLINE+='--'+Item+' '
         TRANSFORMEDDICT[self.Notes][self.CombinedFromToString][self.Endpoint][self.ExecutionTime]["CommandLine"]=CMDLINE
-        TRANSFORMEDDICT[self.Notes][self.CombinedFromToString][self.Endpoint][self.ExecutionTime]["Record"]=TempDictWithArgs
+        #TRANSFORMEDDICT[self.Notes][self.CombinedFromToString][self.Endpoint][self.ExecutionTime]["Record"]=TempDictWithArgs
 
         #print(json.dumps(TRANSFORMEDDICT,indent=4))
         print(self.FOREANDBACKGROUND.format(255,9)+self.Stringa0.format("TIMESTAMP FOR THIS QUERY :"+self.ExecutionTime)+self.RESETCOLOR)
@@ -820,7 +823,7 @@ def main(arguments):
         ContinueHere, action = MyElasticSearch.scan_and_parse_messages(args,MyReport, MyPars)
         if action=="next":
             MyElasticSearch.adjust_filter()
-    enriched_file= open("kibanaminer.medium."+MyElasticSearch.NOTES+MyElasticSearch.ENDPOINT+"-"+"-"+MyElasticSearch.ExecutionTime+".out","w")
+    enriched_file= open("kibanaminer.medium."+MyElasticSearch.NOTES+"-"+MyElasticSearch.ENDPOINT+"-"+"-"+MyElasticSearch.ExecutionTime+".out","w")
     enriched_file.write(json.dumps(MyElasticSearch.enriched_data,indent=4))
     MyElasticSearch.add_to_report(MyReport)
     MyReport.set_name("ELASTICSEARCH"+MyElasticSearch.Endpoint_specific_ReportType+"_REPORT")
