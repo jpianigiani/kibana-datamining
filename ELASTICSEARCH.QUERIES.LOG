@@ -1,1 +1,57 @@
-{"20220928-185244": {"FROM": ["sep/27", "20:20"], "TO": ["sep/28", "2:00"], "WORDS": ["overcloud5vm-compdpdk27hw2-3"], "EXCLUDEWORDS": ["info"], "INTERACTIVE": true, "DEBUG": false, "RECORDS": 1000, "ENDPOINT": "contrailinsight_logs", "NOTES": "BUMtree-991"}, "20220928-185622": {"FROM": ["sep/27", "20:20"], "TO": ["sep/28", "2:00"], "WORDS": ["overcloud5vm-compdpdk27hw2-3"], "EXCLUDEWORDS": ["info"], "INTERACTIVE": true, "DEBUG": false, "RECORDS": 1000, "ENDPOINT": "contrailinsight_logs", "NOTES": "BUMtree-991"}, "20220928-190045": {"FROM": ["sep/27", "20:20"], "TO": ["sep/28", "2:00"], "WORDS": ["overcloud5vm-compdpdk29hw2-2"], "EXCLUDEWORDS": ["info"], "INTERACTIVE": true, "DEBUG": false, "RECORDS": 1000, "ENDPOINT": "contrailinsight_logs", "NOTES": "BUMtree-991"}}
+{
+    "GITLAB_ISSUE_ONS43_SEP29": {
+        "2022-09-29T20:50:002022-09-29T23:59:00": {
+            "logs": {
+                "20220930-102025": {
+                    "CommandLine": "python3 kibanaminer.py --FROM 2022-09-29T20:50:00 --TO 2022-09-29T23:59:00 --WORDS gitlab error --EXCLUDEWORDS info debug --INTERACTIVE --ENDPOINT logs --NOTES GITLAB_ISSUE_ONS43_SEP29 "
+                },
+                "20220930-102121": {
+                    "CommandLine": "python3 kibanaminer.py --FROM 2022-09-29T20:50:00 --TO 2022-09-29T23:59:00 --WORDS gitlab error --EXCLUDEWORDS info debug --INTERACTIVE --ENDPOINT logs --NOTES GITLAB_ISSUE_ONS43_SEP29 "
+                }
+            }
+        }
+    },
+    "OCT-03-S43FAILURE": {
+        "2022-09-30T21:40:002022-10-01T01:00:00": {
+            "logs": {
+                "20221003-094953": {
+                    "CommandLine": "python3 kibanaminer.py --FROM 2022-09-30T21:40:00 --TO 2022-10-01T01:00:00 --WORDS s43 --EXCLUDEWORDS info --INTERACTIVE --ENDPOINT logs --NOTES OCT-03-S43Failure "
+                },
+                "20221003-102141": {
+                    "CommandLine": "python3 kibanaminer.py --FROM 2022-09-30T21:40:00 --TO 2022-10-01T01:00:00 --WORDS s43 --EXCLUDEWORDS info --INTERACTIVE --ENDPOINT logs --NOTES OCT-03-S43Failure "
+                },
+                "20221003-102400": {
+                    "CommandLine": "python3 kibanaminer.py --FROM 2022-09-30T21:40:00 --TO 2022-10-01T01:00:00 --WORDS s43 --EXCLUDEWORDS info --INTERACTIVE --ENDPOINT logs --NOTES OCT-03-S43Failure "
+                },
+                "20221003-102443": {
+                    "CommandLine": "python3 kibanaminer.py --FROM 2022-09-30T21:40:00 --TO 2022-10-01T01:00:00 --WORDS s43 --EXCLUDEWORDS info --INTERACTIVE --ENDPOINT logs --NOTES OCT-03-S43Failure "
+                },
+                "20221003-102549": {
+                    "CommandLine": "python3 kibanaminer.py --FROM 2022-09-30T21:40:00 --TO 2022-10-01T01:00:00 --WORDS s43 --EXCLUDEWORDS info --INTERACTIVE --ENDPOINT logs --NOTES OCT-03-S43Failure "
+                }
+            },
+            "alarms": {
+                "20221003-101000": {
+                    "CommandLine": "python3 kibanaminer.py --FROM 2022-09-30T21:40:00 --TO 2022-10-01T01:00:00 --WORDS s43 --EXCLUDEWORDS info --INTERACTIVE --ENDPOINT alarms --NOTES OCT-03-S43Failure "
+                },
+                "20221003-101206": {
+                    "CommandLine": "python3 kibanaminer.py --FROM 2022-09-30T21:40:00 --TO 2022-10-01T01:00:00 --WORDS nbg995t03hpenfvo01sdffh01 --EXCLUDEWORDS  --INTERACTIVE --ENDPOINT alarms --NOTES OCT-03-S43Failure "
+                }
+            }
+        }
+    },
+    "TEST": {
+        "2022-09-30T21:40:002022-10-01T01:00:00": {
+            "alarms": {
+                "20221006-151218": {
+                    "CommandLine": "python3 kibanaminer.py --FROM 2022-09-30T21:40:00 --TO 2022-10-01T01:00:00 --WORDS s43 --EXCLUDEWORDS info --INTERACTIVE --ENDPOINT alarms --NOTES TEST "
+                }
+            },
+            "logs": {
+                "20221006-151227": {
+                    "CommandLine": "python3 kibanaminer.py --FROM 2022-09-30T21:40:00 --TO 2022-10-01T01:00:00 --WORDS s43 --EXCLUDEWORDS info --INTERACTIVE --ENDPOINT logs --NOTES TEST "
+                }
+            }
+        }
+    }
+}
