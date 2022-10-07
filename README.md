@@ -73,56 +73,22 @@ Whenever the tool is run using the option -n --NOTES <string>, the CLI command i
 ---------------------------------------------------------------------------------
 ## Python dependencies
 The following libraries are used in **report_library.py:
-- import json
-- import string
-- import sys
-- import glob
-- import os
-- import math
-- import re
+- import json,string,sys,glob,os,math,re,traceback
 - from datetime import datetime
-- import traceback
 - from aop_logger import aop_logger
     
-and in **kibanaminer.pt
-- import json
-- import requests
-- import math
-- import os, sys
-- import argparse
+and in **kibanaminer.py
+- import json,requests,math,os, sys, argparse
 - from datetime import datetime,timedelta
-- import time
-- import string
+- import timestring,re, getch
 - from report_library import dynamic_report, parameters,report,menu
-- import re
-- import getch
-
-
 ---------------------------------------------------------------------------------
 # Using the tool
 ---------------------------------------------------------------------------------
 python3 kibanaminer.py -h
+
 usage: kibanaminer.py [-h] [-f FROM [FROM ...]] [-t TO [TO ...]] [-w WORDS [WORDS ...]] [-x EXCLUDEWORDS [EXCLUDEWORDS ...]] [-i] [-d] [-r RECORDS] [-e ENDPOINT] [-n NOTES]
 
-optional arguments:
-  -h, --help            show this help message and exit
-  -f FROM [FROM ...], --FROM FROM [FROM ...]
-                        Specify from when to start fetching logs (YYYY-MM-DDTHH:MM:SS or MMM-DD HH:MM .. many supported date time formats! e.g. 2022-09-20 15:42, 20-sep 15:42, sep-20 15:42 or ElasticSearch format which is
-                        2022-09-20T15:42 (defaults: for year: current year, for time: 00:00 if omitted)). If completely omitted, default is Now-1day
-  -t TO [TO ...], --TO TO [TO ...]
-                        Specify to when to fetch logs (YYYY-MM-DDTHH:MM:SS or MMM-DD HH:MM .. many supported date time formats!). If omitted=Now
-  -w WORDS [WORDS ...], --WORDS WORDS [WORDS ...]
-                        List of space-separated words to search for, in the query
-  -x EXCLUDEWORDS [EXCLUDEWORDS ...], --EXCLUDEWORDS EXCLUDEWORDS [EXCLUDEWORDS ...]
-                        List of space-separated words to EXCLUDE from the query results
-  -i, --INTERACTIVE     If specified, interactive menu is presented after each record to navigate through the records, on screen, providing options to search for specific values in resulting records.
-  -d, --DEBUG           If specified, DEBUG mode set to true
-  -r RECORDS, --RECORDS RECORDS
-                        N. of hits returned by query, default=1000
-  -e ENDPOINT, --ENDPOINT ENDPOINT
-                        ElasticSearch Data view to query: logs (default) for logs, alarms for alarms. See configdata.json keys
-  -n NOTES, --NOTES NOTES
-                        Description of what you are looking for.. Every time the tool is run with -n option, the CLI command line string is saved with the -n KEY in file ELASTICSEARCH.QUERIES.LOG JSON file
 ---------------------------------------------------------------------------------
 EXAMPLES:
         
