@@ -1,11 +1,13 @@
 # kibana-datamining
 
 ---------------------------------------------------------------------------------
-- This tool is supposed to be run on the developer/maintainer local laptop, connected via VPN and using ssh-forwarding to issue API calls to the lab Elasticsearch cluster in NBG99x. Although it is called Kibana Datamining, it actually fetches data from ElasticSearch itself.
+ This tool is supposed to be run on the developer/maintainer local laptop, connected via VPN and using ssh-forwarding to issue API calls to the lab Elasticsearch cluster in NBG99x. Although it is called Kibana Datamining, it actually fetches data from ElasticSearch itself.
 
 The ssh-proxy configuration ,as well the elasticsearch URL, is in configdata.json: the selection of the ENDPOINT name (via the -e parameter) (and the elasticsearch data view e.g fluentd.* = syslogs, alarms= nims-ca-em*) allows to select the ElasticSearch Data view  to visualize alarms, logs , or vendor specific logs.
 
 ------------------
+
+
 
 {
         
@@ -65,6 +67,9 @@ In order for the tool to run on a local laptop to connect to NBG99x Elasticsearc
 The output files containing elasticsearch complete response and the flattened down version of the response are in the same folder, under kibanaminer.out and kibanaminer.short.out AND kibanaminer.medium.out (containing .short.out plus the data parsing results) respectively)
 The human readable formatted report is saved under ./REPORT directory from where the kibanaminer.py runs. This is configurable under the kibanaminer.json file (key: "Files")
 
+Whenever the tool is run using the option -n --NOTES <string>, the CLI command is appended under ELASTICSEARCH.QUERIES.LOG json file.
+        Structure is <string>, <FROM-TO of query ><Endpoint being queried><timestamp of query execution > <Command line with params>
+        
 ---------------------------------------------------------------------------------
 ## Python dependencies
 The following libraries are used in **report_library.py:
@@ -95,6 +100,32 @@ and in **kibanaminer.pt
 
 ---------------------------------------------------------------------------------
 # Using the tool
+---------------------------------------------------------------------------------
+python3 kibanaminer.py -h
+usage: kibanaminer.py [-h] [-f FROM [FROM ...]] [-t TO [TO ...]] [-w WORDS [WORDS ...]] [-x EXCLUDEWORDS [EXCLUDEWORDS ...]] [-i] [-d] [-r RECORDS] [-e ENDPOINT] [-n NOTES]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -f FROM [FROM ...], --FROM FROM [FROM ...]
+                        Specify from when to start fetching logs (YYYY-MM-DDTHH:MM:SS or MMM-DD HH:MM .. many supported date time formats! e.g. 2022-09-20 15:42, 20-sep 15:42, sep-20 15:42 or ElasticSearch format which is
+                        2022-09-20T15:42 (defaults: for year: current year, for time: 00:00 if omitted)). If completely omitted, default is Now-1day
+  -t TO [TO ...], --TO TO [TO ...]
+                        Specify to when to fetch logs (YYYY-MM-DDTHH:MM:SS or MMM-DD HH:MM .. many supported date time formats!). If omitted=Now
+  -w WORDS [WORDS ...], --WORDS WORDS [WORDS ...]
+                        List of space-separated words to search for, in the query
+  -x EXCLUDEWORDS [EXCLUDEWORDS ...], --EXCLUDEWORDS EXCLUDEWORDS [EXCLUDEWORDS ...]
+                        List of space-separated words to EXCLUDE from the query results
+  -i, --INTERACTIVE     If specified, interactive menu is presented after each record to navigate through the records, on screen, providing options to search for specific values in resulting records.
+  -d, --DEBUG           If specified, DEBUG mode set to true
+  -r RECORDS, --RECORDS RECORDS
+                        N. of hits returned by query, default=1000
+  -e ENDPOINT, --ENDPOINT ENDPOINT
+                        ElasticSearch Data view to query: logs (default) for logs, alarms for alarms. See configdata.json keys
+  -n NOTES, --NOTES NOTES
+                        Description of what you are looking for.. Every time the tool is run with -n option, the CLI command line string is saved with the -n KEY in file ELASTICSEARCH.QUERIES.LOG JSON file
+---------------------------------------------------------------------------------
+EXAMPLES:
+        
 python3 kibanaminer.py -i
 - fetches all the records and displays in INTERACTIVE MODE, starting with now()-24hours to now(). User can go over each record and browse the results on screen
 
@@ -120,6 +151,9 @@ python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55 -w s43 hpe error
 
 python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55 -w s43 hpe error -x info warn -r 2500
 - Same as above, requests elasticsearch to provide 2500 records if available. Default is 1000, i tried up to 10000 and it works
+        
+python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55 -w s43 hpe error -x info warn -r 2500 -n QUERY_FOR_S43_SEP16
+- Same as above. The CLI command line with parameters is also saved under key "QUERY_FOR_S43_SEP16" in ELASTICSEARCH.QUERIES.LOG JSON file
 
 ---------------------------------------------------------------------------------
 # Tool software structure:
