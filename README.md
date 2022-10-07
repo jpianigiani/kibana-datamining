@@ -121,6 +121,11 @@ python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55 -w s43 hpe error
 python3 kibanaminer.py -f 2022-09-16t12:26  -t 2022-09-18t18:55 -w s43 hpe error -x info warn -r 2500 -n QUERY_FOR_S43_SEP16
 - Same as above. The CLI command line with parameters is also saved under key "QUERY_FOR_S43_SEP16" in ELASTICSEARCH.QUERIES.LOG JSON file
 
+ ---------------------------------------------------------------------------------
+CheatSheet for running Elasticsearch queries
+ 
+ 
+ 
 ---------------------------------------------------------------------------------
 # Tool software structure:
 The tool is composed of two modules (kibanaminer.py and report_library.py).
