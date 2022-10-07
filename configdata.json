@@ -33,8 +33,8 @@
             },
     "alarms":{
                 "url":"http://172.23.95.77:9200/nims-ca-em*/_search",
-                "fields":["@timestamp","_index","Host","ident","ci-id","severity","data_source","fluentd_tag","summary","additional_text",
-                "nims-alarm.alarmrawdata.state","nims-alarm.nimsmetainfo.identifier"],
+                "fields":["@timestamp","_index","vendor","Host","ident","ci-id","severity","data_source","ServiceName","fluentd_tag","summary","additional_text",
+                "state","identifier"],
                 "timestamp_field":"@timestamp",               
                 "report_type_prefix":"alarms"
             }
