@@ -416,7 +416,7 @@ class kibanaminer():
         with open("kibanaminer.rawdata."+self.NOTES+"-"+self.ENDPOINT+"-"+self.ExecutionTime+".out","w") as file1:
             file1.write(json.dumps(self.queryresult,indent=10))
 #------------------------------------------------------------------------------------------------------------------------------------
-    def transform_data3(self,arguments ):
+    def transform_data3(self ):
 
         def get_recursively(search_dict, field):
             if isinstance(search_dict, dict):
@@ -674,6 +674,14 @@ class kibanaminer():
 #------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------------------
     def scan_and_parse_messages(self, args,reportobject, pars):
+
+
+        def datetransform(v):
+            stringa=v[0:18]+v[28:35]
+            timestampvalue=datetime.strptime(stringa.lower(),"%Y-%m-%dt%H:%M:%S%z")
+            retval= "\t\t\t\t\t\t\t\t\t\t\t\t\t  ("+datetime.strftime(timestampvalue,"%d-%B %H:%M:%S %p")+" )"
+            return retval
+
         mylist= list(self.transformed_data.keys())
         mylistlen=len(mylist)
         self.enriched_data={}
@@ -684,6 +692,8 @@ class kibanaminer():
 
         Direction=1
         while GoOn:
+            os.system('clear')
+
             if args.WORDS:
                 StringaWords=",".join(args.WORDS)
             else:
@@ -696,6 +706,7 @@ class kibanaminer():
             Stringa1="{:} query from {:15s} to {:15s} : Words included:[{:s}] - Words excluded: [{:s}])".format(self.ENDPOINT,datetime.strftime(self.QueryFromDatetime,"%b %d, %H:%M:%S"),datetime.strftime(self.QueryToDatetime,"%b %d, %H:%M:%S"),StringaWords,StringaExclWords)
             Stringa=self.Stringa0.format(Stringa1)
             print(Stringa)
+
             Stringa0="{0:_^"+str(pars.ScreenWitdh)+"}"
             Stringa1=" RECORD: {:3d} OF {:3d}  (from {:15s} to {:15s})".format(key,mylistlen-1, datetime.strftime(self.Tstart,"%b %d, %H:%M:%S"),datetime.strftime(self.Tend,"%b %d, %H:%M:%S"))
             Stringa=Stringa0.format(Stringa1)
@@ -716,6 +727,7 @@ class kibanaminer():
 
             Stringa="{:}"         
             #print(Stringa.format(json.dumps(self.transformed_data[key],indent=5)))
+            print(datetransform(self.transformed_data[key]["@timestamp"]))
             for k,v in modifiedrecord.items(): #self.transformed_data[key].items():  
                 #print("----------ORIGINAL VALUE ---------------")
                 Stringa=self.Default+"{:20s}".format(k)
@@ -770,19 +782,33 @@ class kibanaminer():
                     retval= False
                     action=""
                     GoOn=False
-        return retval,action
+        return retval,action,Direction
 
 
-    def adjust_filter(self):
+    def adjust_filter(self, Direction):
         
         TimeCoveredbyPreviousQuery=self.Tend - self.Tstart
         NumberOfRecords = self.RECCOUNT
-        print("TIMEGAP = ",TimeCoveredbyPreviousQuery)
-        self.QueryFromDatetime = self.Tend
+        print("TimeCoveredbyPreviousQuery = ",TimeCoveredbyPreviousQuery)
+        print("Tstart:", self.Tstart)
+        print("Tend  :",self.Tend)
+        if Direction ==1:
+            print("adjust_filter: going forward for next query")
+            self.QueryFromDatetime = self.Tend
+            PreviousTimeTo =self.QueryToDatetime 
+            self.QueryToDatetime=PreviousTimeTo+TimeCoveredbyPreviousQuery
+        else:
+            print("adjust_filter: going BACKWARD for next query")
+            self.QueryToDatetime=self.Tstart
+            PreviousTimeFrom =self.QueryFromDatetime
+            self.QueryFromDatetime = PreviousTimeFrom-TimeCoveredbyPreviousQuery
+            print("previousTime=Tend= ",PreviousTimeFrom)
+            print("setting FROM=",self.QueryFromDatetime )
+            print("setting TO  =",self.QueryToDatetime )
+
         self.QueryFrom=datetime.strftime(self.QueryFromDatetime,"%Y-%m-%dT%H:%M:%S")
-        PreviousTimeTo =self.QueryToDatetime 
-        self.QueryToDatetime=PreviousTimeTo
         self.QueryTo=datetime.strftime(self.QueryToDatetime,"%Y-%m-%dT%H:%M:%S")
+
         stringa1= self.Stringa0.format( (" Next query filter : from {:} to {:}".format(self.QueryFrom,self.QueryTo)))
         print(self.FOREANDBACKGROUND.format(0,255)+stringa1+self.RESETCOLOR)
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -821,15 +847,15 @@ def main(arguments):
     while ContinueHere:
         MyElasticSearch.set_filter()
         MyElasticSearch.get_data_from_kibana()
-        MyElasticSearch.transform_data3(args)
-        ContinueHere, action = MyElasticSearch.scan_and_parse_messages(args,MyReport, MyPars)
+        MyElasticSearch.transform_data3()
+        ContinueHere, action , Direction= MyElasticSearch.scan_and_parse_messages(args,MyReport, MyPars)
         if action=="next":
-            MyElasticSearch.adjust_filter()
+            MyElasticSearch.adjust_filter(Direction)
     enriched_file= open("kibanaminer.medium."+MyElasticSearch.NOTES+"-"+MyElasticSearch.ENDPOINT+"-"+"-"+MyElasticSearch.ExecutionTime+".out","w")
     enriched_file.write(json.dumps(MyElasticSearch.enriched_data,indent=4))
-    MyElasticSearch.add_to_report(MyReport)
-    MyReport.set_name("ELASTICSEARCH"+MyElasticSearch.Endpoint_specific_ReportType+"_REPORT")
-    MyReport.print_report(MyPars)
+    #MyElasticSearch.add_to_report(MyReport)
+    #MyReport.set_name("ELASTICSEARCH"+MyElasticSearch.Endpoint_specific_ReportType+"_REPORT")
+    #MyReport.print_report(MyPars)
 
 if __name__ == '__main__':
     main(sys.argv)

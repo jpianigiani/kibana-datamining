@@ -129,6 +129,7 @@
             "url":["(?P<result>(http[s]?|ftp):\/)?\/?([^:\/\\s]+)((\/\\w+)*\/)([\\w\\-\\.]+[^#?\\s]+)(.*)?(#[\\w\\-]+)?$"],
             "username":["(?P<result>[=: \"](username|user)[=: \"]+(\\w+))"],
             "vim_error":["(?P<result>error repoted by vim)"],
+            "martian_address":["(?P<result>martian)"],
             "method": ["\b(?P<result>get|post|put)\b"],
             "vendor": ["(?P<result>jnp|msw|mav|hpe|nok|netcracker|rhel|junos|contrail)"],
             "mav_vnfname":["(?P<result>pcrt|pcmp|pccd|cram|scbc|cmem|crdb|ecac|ecxc|sccc|sdcc|vnfm)"],
