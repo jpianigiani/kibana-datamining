@@ -80,7 +80,7 @@ The following libraries are used in **report_library.py:
 and in **kibanaminer.py
 - import json,requests,math,os, sys, argparse
 - from datetime import datetime,timedelta
-- import timestring,re, getch
+- import timestring,re
 - from report_library import dynamic_report, parameters,report,menu
 ---------------------------------------------------------------------------------
 # Using the tool
