@@ -13,9 +13,6 @@ import dateutil.parser as dparser
 from report_library import dynamic_report, parameters,report,menu
 import logging
 import re
-import getch
-
-
 
 
 class kibanaminer():
@@ -79,6 +76,7 @@ class kibanaminer():
         #self.TwoLevelParseFields=configdata["two_level_parse"]
         self.ENDPOINT=args.ENDPOINT
         self.NOTES=args.NOTES
+        self.SAVEDATA=args.SAVE
 
         if self.ENDPOINT in self.configdata.keys():
             self.elastic_url = self.configdata[self.ENDPOINT]["url"]
@@ -413,8 +411,9 @@ class kibanaminer():
             exit(-1)
         print("response code {}".format(self.request.status_code))
         self.queryresult=self.request.json()
-        with open("kibanaminer.rawdata."+self.NOTES+"-"+self.ENDPOINT+"-"+self.ExecutionTime+".out","w") as file1:
-            file1.write(json.dumps(self.queryresult,indent=10))
+        if self.SAVEDATA:
+            with open("kibanaminer.rawdata."+self.NOTES+"-"+self.ENDPOINT+"-"+self.ExecutionTime+".out","w") as file1:
+                file1.write(json.dumps(self.queryresult,indent=10))
 #------------------------------------------------------------------------------------------------------------------------------------
     def transform_data3(self ):
 
@@ -554,6 +553,42 @@ class kibanaminer():
 
 
     def interactive(self, args, DirectionValue):
+    
+        def getch(echo=False):
+            import termios
+            import sys, tty
+            def _getch():
+                fd = sys.stdin.fileno()
+                old_settings = termios.tcgetattr(fd)
+                try:
+                    tty.setraw(fd)
+                    ch = sys.stdin.read(1)
+                    if echo:
+                        sys.stdout.write(ch)
+                        sys.stdout.flush()
+                finally:
+                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+                return ch
+            return _getch()
+
+        def get_string(exit_chars, echo=True):
+            GoOn=True
+            retval=""
+            while GoOn:
+                ch=getch(echo)
+                if ch in exit_chars:
+                    GoOn=False
+                else:
+                    retval+=ch
+            return retval
+
+        def get_key():
+            first_char = getch()
+            if first_char == '\x1b':
+                return {'[A': 'n', '[B': 's', '[C': 'e', '[D': 'w'}[getch() + getch()]
+            else:
+                return first_char
+
         if DirectionValue==1:
             DirectionChar='+'
         else:
@@ -563,19 +598,18 @@ class kibanaminer():
             TextToDisplay+=k+'='+v
         InputCharacterMap={
             chr(27):{"name":"ESC","title":"Exit","value":0,"action":"exit"},
+            chr(3):{"name":"ctrl-c","title":"Exit","value":0,"action":"exit"},
             "-":{"name":"-","title":"-1 rec","value":-1,"action":"delta"},
-            '\n':{"name":"CR","title":DirectionChar+"1 rec","value":1,"action":"delta"},
+            chr(13):{"name":"CR","title":DirectionChar+"1 rec","value":1,"action":"delta"},
             "1":{"name":"1","title":DirectionChar+"10 rec","value":10,"action":"delta"},
             "2":{"name":"2","title":DirectionChar+"30 rec","value":30,"action":"delta"},
             "3":{"name":"3","title":DirectionChar+"100 rec","value":100,"action":"delta"},
-            "/":{"name":"/","title":"search","value":0,"action":"search", "exit":['\n','/','x1b']},
-            "r":{"name":"r","title":"search'"+TextToDisplay+"'","value":0,"action":"repeatsearch", "exit":['\n','/','x1b']},
+            "/":{"name":"/","title":"search","value":0,"action":"search", "exit":[chr(10),chr(3),chr(27),chr(13)]},
+            "r":{"name":"r","title":"search again '"+TextToDisplay+"'","value":0,"action":"repeatsearch", "exit":['\n','/','x1b', chr(13)]},
             "n":{"name":"n","title":"Fetch next recs","value":0,"action":"next"},
-
-            " ":{"name":"<Space>","title":"Direction"+DirectionChar,"value":0,"action":"change"}
+            chr(32):{"name":"<Space>","title":"Direction"+DirectionChar,"value":0,"action":"change"}
         }
         returnFilter=None
-
         ExitActions=["delta","exit", "change","next"]
         OneChar=''
         var_Continue=True
@@ -587,11 +621,13 @@ class kibanaminer():
             MenuString+=MenuItem        
         Stringa=self.FOREANDBACKGROUND.format(255,4)+self.Stringa0.format(MenuString)+self.Backg_Default
         print(Stringa)
+
+        # Main character handling loop to browse through records
+        # --------------------------------------
         while var_Continue:
             CharSequence=''
             while OneChar not in ListOfAllowedKeys:
-                OneChar=getch.getch().lower()
-                #print(ascii(ch))
+                OneChar= getch().lower()
                 CharSequence+=OneChar.lower()
             returnAction= InputCharacterMap[OneChar]["action"]
             returnValue=InputCharacterMap[OneChar]["value"]
@@ -621,28 +657,36 @@ class kibanaminer():
                 CharSequence=''
                 OneChar=''
                 ExitSearch=False
-                MenuItem=self.Backg_Red_ForeG_White+"\tSEARCH : ESC or CR to exit\t"
+                MenuItem=self.Backg_Red_ForeG_White+"\n\tSEARCH : ESC or CR to exit\t"
                 count=0
-                AllowedInputs=['\n','\x1b']
+                AllowedInputs=[]
+                for Item in MyDict["exit"]:
+                    AllowedInputs.append(Item)
                 for Item in self.FieldsList:
                     MenuItem+="{:1d} {:10s}\t".format(count,Item)
                     AllowedInputs.append(str(count))
                     count+=1
                 print(MenuItem)
+                #print(AllowedInputs)
                 OneChar=''
                 CharSequence=''
-                while OneChar not  in AllowedInputs:
-                    OneChar=getch.getche()
-                if OneChar not in ['\n','\x1b']:
+                # Get the field name to be searched
+                while OneChar not in AllowedInputs:
+                    OneChar=getch(True).lower()
+
+                if OneChar not in MyDict["exit"]:
                     value=int(OneChar)
                     stringa=self.Backg_Red_ForeG_White+"\tsearch field {:} for the following value: "
                     FieldName=self.FieldsList[value]
                     print(stringa.format(FieldName.upper()))
+                    #sys.stdout.write(stringa.format(FieldName.upper()))
                     returnFilter={FieldName:""}
                     CharSequence=''
                     OneChar=''
+                    # Get string to be searched for in field defined above
                     while OneChar not in MyDict["exit"]:
-                        OneChar=getch.getche()
+                        #OneChar=getch.getche()
+                        OneChar=getch(True).lower()
                         if OneChar not in MyDict["exit"]:
                             CharSequence+=OneChar.lower()
                     var_Continue=False
@@ -770,6 +814,7 @@ class kibanaminer():
                             break
                     if matchfound==False:
                         print(self.FAIL," Did not find any match for {:} in field {:}".format(fieldname,MatchValue),self.Default)
+                        time.sleep(1)
                     GoOn=True
                     Retval=False
                     
@@ -835,6 +880,8 @@ def main(arguments):
     parser.add_argument("-e","--ENDPOINT", help="ElasticSearch Data view to query: logs (default) for logs, alarms for alarms. See configdata.json keys",  default="logs", required=False)
     parser.add_argument("-n","--NOTES", help="Description of what you are looking for.. Every time the tool is run with -n option, the CLI command line string is saved with the -n KEY in file ELASTICSEARCH.QUERIES.LOG JSON file ",  
             default="DEFAULT", required=False)
+    parser.add_argument("-s","--SAVE", help="If specified, data from query is saved on JSON files.", action='store_true')
+
     args=parser.parse_args()
 
     MyElasticSearch=kibanaminer(args)
@@ -851,8 +898,9 @@ def main(arguments):
         ContinueHere, action , Direction= MyElasticSearch.scan_and_parse_messages(args,MyReport, MyPars)
         if action=="next":
             MyElasticSearch.adjust_filter(Direction)
-    enriched_file= open("kibanaminer.medium."+MyElasticSearch.NOTES+"-"+MyElasticSearch.ENDPOINT+"-"+"-"+MyElasticSearch.ExecutionTime+".out","w")
-    enriched_file.write(json.dumps(MyElasticSearch.enriched_data,indent=4))
+    if MyElasticSearch.SAVEDATA:
+        enriched_file= open("kibanaminer.medium."+MyElasticSearch.NOTES+"-"+MyElasticSearch.ENDPOINT+"-"+"-"+MyElasticSearch.ExecutionTime+".out","w")
+        enriched_file.write(json.dumps(MyElasticSearch.enriched_data,indent=4))
     #MyElasticSearch.add_to_report(MyReport)
     #MyReport.set_name("ELASTICSEARCH"+MyElasticSearch.Endpoint_specific_ReportType+"_REPORT")
     #MyReport.print_report(MyPars)
