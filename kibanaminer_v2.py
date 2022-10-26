@@ -10,6 +10,7 @@ from datetime import datetime,timedelta
 import time
 import string
 import dateutil.parser as dparser
+from UserInteraction import UserInteraction
 from report_library import dynamic_report, parameters,report,menu
 import logging
 import re
@@ -77,6 +78,7 @@ class kibanaminer():
         self.ENDPOINT=args.ENDPOINT
         self.NOTES=args.NOTES
         self.SAVEDATA=args.SAVE
+        self.UI=UserInteraction()
 
         if self.ENDPOINT in self.configdata.keys():
             self.elastic_url = self.configdata[self.ENDPOINT]["url"]
@@ -555,34 +557,6 @@ class kibanaminer():
 
     def interactive(self, args, DirectionValue):
     
-        def getch(echo=False):
-            import termios
-            import sys, tty
-            def _getch():
-                fd = sys.stdin.fileno()
-                old_settings = termios.tcgetattr(fd)
-                try:
-                    tty.setraw(fd)
-                    ch = sys.stdin.read(1)
-                    if echo:
-                        sys.stdout.write(ch)
-                        sys.stdout.flush()
-                finally:
-                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                return ch
-            return _getch()
-
-        def get_string(exit_chars, echo=True):
-            GoOn=True
-            retval=""
-            while GoOn:
-                ch=getch(echo)
-                if ch in exit_chars:
-                    GoOn=False
-                else:
-                    retval+=ch
-            return retval
-
         if DirectionValue==1:
             DirectionChar='+'
         else:

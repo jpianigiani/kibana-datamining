@@ -1,12 +1,38 @@
 {
     
 "keysequences":{
-    "up":[[27,91,65],[45]],
-    "down":[[27,91,66]],
-    "right":[[27, 91, 67]],
-    "left":[[27, 91, 68]],
-    "delete":[[126],[127]],
-    "execute":[[10],[13],[88],[120]]
+    "menu1":{
+        "exit":[[81],[113],[3]],
+        "next_one":[[13],[27,91,66],[27,91,65]],
+        "previous_one":[[27,91,67],[27,91,68],[45]],
+        "next_10":[[49]],
+        "next_30":[[50]],
+        "next_100":[[51]],
+        "delete":[[126],[127]],
+        "search":[[47]],
+        "repeat_search":[[82],[114]],
+        "next_query":[[110],[78]],
+        "change_direction":[[32]]
+     }
+    ,
+    "menu2":{
+        "user_input":[[]],
+        "end_input":[[10],[13],[47]]
+    }
 }
+,
+"actions": {
+    "exit":{"name":"ESC or ctrl-C","title":"Exit","value":0,"action":"exit"},
+    "next_one":{"name":"CR, right, or ArrowUp or Right","title":"{:}1 rec","string":"DirectionText","value":1,"action":"delta"},
+    "previous_one":{"name":"- or ArrowDown or Left","title":"Previous rec","value":-1,"action":"delta"},
+    "next_10":{"name":"1","title":"{:}10 rec","string":"DirectionText","value":10,"action":"delta"},
+    "next_30":{"name":"2","title":"{:}30 rec","string":"DirectionText","value":30,"action":"delta"},
+    "next_100":{"name":"3","title":"{:}100 rec","string":"DirectionText","value":100,"action":"delta"},
+    "search":{"name":"/","title":"search","value":0,"action":"search", "exit":"end_input"},
+    "repeat_search":{"name":"r","title":"search again '{:}'","value":0,"action":"repeatsearch", "exit":"end_input"},
+    "next_query":{"name":"n","title":"Fetch next recs","value":0,"action":"next"},
+    "change_direction":{"name":"<Space>","title":"Direction {:}","string":"TextToDisplay","value":0,"action":"change"}
+    },
+"exit_actions":["delta","exit", "change","next"]
 
 }
